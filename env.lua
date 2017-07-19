@@ -1,0 +1,3 @@
+local dbcollection = {}
+
+return dbcollection
