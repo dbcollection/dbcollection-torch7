@@ -36,6 +36,16 @@ local function tostring_py(input)
     end
 end
 
+local function tostring_py2(input)
+    if input == 'true' then
+        return 'True'
+    elseif input == 'false' then
+        return 'False'
+    else
+        return ('\'%s\''):format(input)
+    end
+end
+
 
 --[[ convert to string if it does not match "None" ]]
 local function tostring_none(input)
@@ -73,7 +83,7 @@ end
 -- API functions
 -----------------------------------------------------------
 
-function dbcollection.load(options)
+function dbcollection.load(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
@@ -124,7 +134,7 @@ function dbcollection.load(options)
     }
 
     -- parse options
-    local args = initcheck(options)
+    local args = initcheck(...)
 
     local home_path = get_cache_file_path(args)
 
@@ -166,7 +176,7 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.download(options)
+function dbcollection.download(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
@@ -218,11 +228,11 @@ function dbcollection.download(options)
     }
 
     -- parse options
-    local args = initcheck(options)
+    local args = initcheck(...)
 
     assert(args.name, ('Must input a valid dataset name: %s'):format(args.name))
 
-    local command = ('import dbcollection.manager as dbc;' ..
+    local command = ('import dbcollection as dbc;' ..
                     'dbc.download(name=\'%s\',data_dir=%s,extract_data=%s,verbose=%s,is_test=%s)')
                     :format(args.name, tostring_none(args.data_dir), tostring_py(args.extract_data),
                             tostring_py(args.verbose), tostring_py(args.is_test))
@@ -232,7 +242,7 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.process(options)
+function dbcollection.process(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
@@ -276,11 +286,11 @@ function dbcollection.process(options)
     }
 
     -- parse options
-    local args = initcheck(options)
+    local args = initcheck(...)
 
     assert(args.name, ('Must input a valid dataset name: %s'):format(args.name))
 
-    local command = ('import dbcollection.manager as dbc;' ..
+    local command = ('import dbcollection as dbc;' ..
                     'dbc.process(name=\'%s\',task=\'%s\',verbose=%s,is_test=%s)')
                     :format(args.name, args.task, tostring_py(args.verbose),
                             tostring_py(args.is_test))
@@ -290,7 +300,7 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.add(options)
+function dbcollection.add(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
@@ -338,7 +348,7 @@ function dbcollection.add(options)
     }
 
     -- parse options
-    local args = initcheck(options)
+    local args = initcheck(...)
 
     assert(args.name, ('Must input a valid dataset name: %s'):format(args.name))
     assert(args.task, ('Must input a valid dataset name: %s'):format(args.task))
@@ -357,7 +367,7 @@ function dbcollection.add(options)
         args.keywords = '[]'
     end
 
-    local command = ('import dbcollection.manager as dbc;' ..
+    local command = ('import dbcollection as dbc;' ..
                     'dbc.add(name=\'%s\',task=\'%s\',data_dir=\'%s\',' ..
                     'file_path=\'%s\',keywords=%s,is_test=%s)')
                     :format(args.name, args.task, args.data_dir, args.file_path,
@@ -368,7 +378,7 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.remove(options)
+function dbcollection.remove(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
@@ -408,11 +418,11 @@ function dbcollection.remove(options)
     }
 
     -- parse options
-    local args = initcheck(options)
+    local args = initcheck(...)
 
     assert(args.name, ('Must input a valid dataset name: %s'):format(args.name))
 
-    local command = ('import dbcollection.manager as dbc;' ..
+    local command = ('import dbcollection as dbc;' ..
                     'dbc.remove(name=\'%s\', delete_data=%s,is_test=%s)')
                     :format(args.name, tostring_py(args.delete_data), tostring_py(args.is_test))
 
@@ -421,7 +431,7 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.config_cache(options)
+function dbcollection.config_cache(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
@@ -498,9 +508,9 @@ function dbcollection.config_cache(options)
     }
 
     -- parse options
-    local args = initcheck(options)
+    local args = initcheck(...)
 
-    local command = ('import dbcollection.manager as dbc;' ..
+    local command = ('import dbcollection as dbc;' ..
                     'dbc.config_cache(field=%s,value=%s,delete_cache=%s, ' ..
                     'delete_cache_dir=%s,delete_cache_file=%s,reset_cache=%s, ' ..
                     'is_test=%s)')
@@ -514,13 +524,13 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.query(options)
+function dbcollection.query(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
             Do simple queries to the cache.
 
-            list all available datasets for download/preprocess. (tenho que pensar melhor sobre este)
+            list all available datasets for download/preprocess.
 
             Parameters:
             -----------
@@ -548,9 +558,9 @@ function dbcollection.query(options)
     }
 
     -- parse options
-    local args = initcheck(options)
+    local args = initcheck(...)
 
-    local command = ('import dbcollection.manager as dbc;' ..
+    local command = ('import dbcollection as dbc;' ..
                     'print(dbc.query(pattern=\'%s\',is_test=%s))')
                     :format(args.pattern, tostring_py(args.is_test))
 
@@ -559,19 +569,34 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.info(options)
+function dbcollection.info(...)
     local initcheck = argcheck{
         pack=true,
-        help=[[
+        doc=[[
             Prints the cache contents.
 
             Prints the contents of the dbcollection.json cache file to the screen.
 
             Parameters
             ----------
-            list_datasets : bool
-                Print available datasets in the dbcollection package.
-                (optional, default=false)
+            name : str
+                Name of the dataset to display information.
+                (optional, default='None')
+            paths_info : bool
+                Print the paths info to screen.
+                (optional, default=true)
+            datasets_info : bool/str
+                Print the datasets info to screen.
+                If a string is provided, it selects
+                only the information of that string
+                (dataset name).
+                (optional, default=true)
+            categories_info : bool/str
+                Print the paths info to screen.
+                If a string is provided, it selects
+                only the information of that string
+                (dataset name).
+                (optional, default=true)
             is_test : bool
                 Flag used for tests.
                 (optional, default=false)
@@ -584,24 +609,39 @@ function dbcollection.info(options)
             ------
                 None
         ]],
-        {name="list_datasets", type="boolean", default=false,
-        help="Print available datasets in the dbcollection package.",
+        {name="name", type="string", default='None',
+        help="Name of the dataset to display information.",
+        opt = true},
+        {name="paths_info", type="boolean", default=true,
+        help=" Print the paths info to screen.",
+        opt = true},
+        {name="datasets_info", type="string", default='true',
+        help="Print the datasets info to screen." ..
+                "If a string is provided, it selects" ..
+                "only the information of that string" ..
+                "(dataset name).",
+        opt = true},
+        {name="categories_info", type="string", default='true',
+        help="Print the paths info to screen. " ..
+                "If a string is provided, it selects" ..
+                "only the information of that string" ..
+                "(dataset name).",
         opt = true},
         {name="is_test", type="boolean", default=false,
         help="Flag used for tests.",
         opt = true},
-        {name="t", type="boolean", default=false, -- without this it gives an error
-        help="Flag used for tests.",
-        opt = true}
     }
 
     -- parse options
-    local args = initcheck(options)
+    local args = initcheck(...)
 
-    local command = ('import dbcollection.manager as dbc;' ..
-                    'dbc.info(list_datasets=%s,is_test=%s)')
-                    :format(tostring_py(args.list_datasets),
-                            tostring_py(args.is_test or false))
+    local command = ('import dbcollection as dbc;' ..
+                     'dbc.info(name=%s, paths_info=%s, datasets_info=%s, categories_info=%s, is_test=%s)')
+                     :format(tostring_none(args.name),
+                             tostring_py(args.paths_info),
+                             tostring_py2(args.datasets_info),
+                             tostring_py2(args.categories_info),
+                             tostring_py(args.is_test))
 
     os.execute(('python -c "%s"'):format(command))
 end
