@@ -2,7 +2,7 @@
 
 This is a simple Lua wrapper for the Python's [dbcollection](https://github.com/farrajota/dbcollection) module. The functionality is almost the same, appart from some few minor differences related to Lua, namely regarding setting up ranges when fetching data.
 
-Internally it calls the Python's dbcollection module for data download/process/management. The, the Lua module interacts solely with the metadata `hdf5` file to fetch data from disk.
+Internally it calls the Python's dbcollection module for data download/process/management. The, Lua/Torch7 interacts solely with the metadata `hdf5` file to fetch data from disk.
 
 ## Package installation
 
@@ -26,21 +26,18 @@ luarocks install argcheck
 
 ### Installation
 
+To install the dbcollection's Lua/Torch7 API, first the Python's version must be installed on your system. If you do not have it already installed, then you can install it either via `pip`, `conda` or from [source](https://github.com/dbcollection/dbcollection#package-installation). Here we'll use `pip` to install this package:
 
-To install the Lua/Torch7 dbcollection package, do the following steps:
+```
+pip install dbcollection
+```
 
-1. install `dbcollection` Python's version. This can be done via `pip`, `conda` or from [source](https://github.com/farrajota/dbcollection#package-installation):
+Then, all there is to do is to clone this repo and install the package via `luarocks`:
 
-    ```
-    pip install dbcollection
-    ```
-
-2. clone this repo and install the package via `luarocks`:
-
-    ```
-    git clone https://github.com/farrajota/dbcollection-torch7
-    cd dbcollection-torch7 && luarocks make
-    ```
+```
+git clone https://github.com/dbcollection/dbcollection-torch7
+cd dbcollection-torch7 && luarocks make
+```
 
 
 ## Usage
@@ -98,4 +95,4 @@ For a more detailed view of the Lua's API documentation see [here](DOCUMENTATION
 
 ## License
 
-MIT license (see the `LICENSE` file)
+MIT license (see the [LICENSE](LICENSE) file)
