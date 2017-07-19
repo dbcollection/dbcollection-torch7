@@ -573,9 +573,20 @@ function dbcollection.info(...)
     local initcheck = argcheck{
         pack=true,
         doc=[[
-            Prints the cache contents.
+            Prints the cache contents and other information.
 
-            Prints the contents of the dbcollection.json cache file to the screen.
+            This method provides a dual functionality: (1) It displays
+            the cache file content that shows which datasets are
+            available for loading right now; (2) It can display all
+            available datasets to use in the dbcollection package, and
+            if a name is provided, it displays what tasks it contains
+            for loading.
+
+            The default is to display the cache file contents to the
+            screen. To list the available datasets, set the 'name'
+            input argument to 'all'. To list the tasks of a specific
+            dataset, set the 'name' input argument to the name of the
+            desired dataset (e.g., 'cifar10').
 
             Parameters
             ----------
