@@ -4,9 +4,9 @@ This is a simple Lua wrapper for the Python's [dbcollection](https://github.com/
 
 Internally it calls the Python's dbcollection module for data download/process/management. The, the Lua module interacts solely with the metadata `hdf5` file to fetch data from disk.
 
-# Package installation
+## Package installation
 
-## requirements
+### Requirements
 
 This package requires:
 
@@ -24,7 +24,7 @@ luarocks install json
 luarocks install argcheck
 ```
 
-## installation
+### Installation
 
 
 To install the Lua/Torch7 dbcollection package, do the following steps:
@@ -43,7 +43,7 @@ To install the Lua/Torch7 dbcollection package, do the following steps:
     ```
 
 
-# Usage
+## Usage
 
 This package follows the same API as the Python version. Once installed, to use the package simply require *dbcollection*:
 
@@ -69,7 +69,7 @@ This API lets you download+extract most dataset's data directly from its source 
 dbc.download{name='cifar10', data_dir='home/some/dir'}
 ```
 
-## Data fetching
+### Data fetching
 
 Once a dataset has been loaded, in order to retrieve data you can either use Torch7's `HDF5` API or use the provided methods to retrive data from the .h5 metadata file.
 
@@ -91,11 +91,11 @@ label = mnist:get('train', 'labels', 1)
 ```
 
 
-# Documentation
+## Documentation
 
 For a more detailed view of the Lua's API documentation see [here](DOCUMENTATION.md#db.documentation).
 
 
-# License
+## License
 
 MIT license (see the `LICENSE` file)
