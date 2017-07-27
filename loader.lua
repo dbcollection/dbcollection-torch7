@@ -2,8 +2,8 @@
     Dataset loader class.
 --]]
 
-local dbcollection = require 'dbcollection.env'
 local hdf5 = require 'hdf5'
+local dbcollection = require 'dbcollection.env'
 local string_ascii = require 'dbcollection.utils.string_ascii'
 
 local DataLoader = torch.class('dbcollection.DatasetLoader', dbcollection)
@@ -173,7 +173,11 @@ function DataLoader:object(set_name, idx, is_value)
             end
             table.insert(out, data)
         end
-        return out
+        if #out > 1 then
+            return out
+        else
+            return out[1]
+        end
     else
         return indexes
     end
