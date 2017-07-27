@@ -17,8 +17,8 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
+--[[ Convert a string to a torch.CharTensor ]]--
 local function convert_str_to_ascii(input)
--- Convert a string to a torch.CharTensor
     assert(input)
 
     local input_type = type(input)
@@ -45,14 +45,18 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
+--[[ convert torch.CharTensor to a table of strings ]]--
 local function convert_ascii_to_str(input)
--- convert torch.CharTensor to a table of strings
     local out = {}
     local input = input:char()
     for i=1, input:size(1) do
         table.insert(out, ffi.string(input[i]:data()))
     end
-    return out
+    if #out > 1 then
+        return out
+    else
+        return out[1]
+    end
 end
 
 ------------------------------------------------------------------------------------------------------------

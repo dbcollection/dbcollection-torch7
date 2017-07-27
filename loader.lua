@@ -2,8 +2,8 @@
     Dataset loader class.
 --]]
 
-local dbcollection = require 'dbcollection.env'
 local hdf5 = require 'hdf5'
+local dbcollection = require 'dbcollection.env'
 local string_ascii = require 'dbcollection.utils.string_ascii'
 
 local DataLoader = torch.class('dbcollection.DatasetLoader', dbcollection)
@@ -57,6 +57,14 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
+local function assert_value(idx, range_ini, range_end)
+    assert(idx)
+    assert(range_ini)
+    assert(range_end)
+    assert(idx>=range_ini and idx<=range_end, string.format('Invalid index value: %d. Valid range: (%d, %d);',
+                                                            idx, range_ini, range_end))
+end
+
 function DataLoader:get(set_name, field_name, idx)
 --[[
     Retrieve data from the dataset's hdf5 metadata file.
@@ -69,10 +77,9 @@ function DataLoader:get(set_name, field_name, idx)
         Name of the set.
     field_name : string
         Name of the data field.
-	idx : number/table
+	idx : number/table, optional
         Index number of the field. If the input is a table, it uses it as a range
         of indexes and returns the data for that range.
-        (optional, default=nil)
 
     Returns
     -------
@@ -91,16 +98,26 @@ function DataLoader:get(set_name, field_name, idx)
     local out
     if idx then
         local size = data:dataspaceSize()
-        if type(idx)=='table' then
-            assert(#idx>=1 and #idx<=2, 'Invalid range. Must have at most one or two entries: (idx_ini, idx_end).')
-            if #idx == 1 then idx[2]=idx[1] end
-        elseif type(idx)=='number' then
-            assert(idx>=1 and idx<=size[1], string.format('Invalid \'%s\' value: %d. Valid range: (1, %d);',
-                                                          field_name, idx, size[1]))
+
+        if type(idx) == 'number' then
+            assert_value(idx, 1, size[1])
             idx = {idx, idx}
+        elseif type(idx) == 'table' then
+            assert(next(idx), 'Invalid range. Cannot input an empty table. Valid inputs: nil, {idx} or {idx_ini, idx_end}.')
+            assert(#idx>=1 and #idx<=2, 'Invalid range. Must have at most two entries. Valid inputs: nil, {idx} or {idx_ini, idx_end}.')
+            if #idx == 1 then
+                assert_value(idx[1], 1, size[1])
+                idx[2]=idx[1]
+            else
+                assert_value(idx[1], 1, size[1])
+                assert_value(idx[2], 1, size[1])
+                assert(idx[2] >= idx[1], 'Invalid range. The first index must be lower or equal to the second one. ' ..
+                                         'Valid inputs: nil, {idx} or {idx_ini, idx_end}.')
+            end
         else
             error('Invalid index type: %s. Must be either a \'number\' or a \'table\'.')
         end
+
         local ranges = {idx}
         for i=2, #size do
             table.insert(ranges, {1, size[i]})
@@ -137,10 +154,9 @@ function DataLoader:object(set_name, idx, is_value)
     idx : int, long, list
         Index number of the field. If it is a list, returns the data
         for all the value indexes of that list
-    is_value : bool
+    is_value : bool, optional
        Outputs a tensor of indexes (if false)
        or a table of tensors/values (if true).
-       (optional, default=false)
 
     Returns:
     --------
@@ -152,14 +168,12 @@ function DataLoader:object(set_name, idx, is_value)
         None
 ]]
     assert(set_name, 'Must input a valid set name')
-    assert(idx, 'Must input a valid index')
-    assert(idx>0, ('Must input a valid index range: %d (>0)'):format(idx))
-
     local is_value = is_value or false
 
     local set_path = ('%s/%s/'):format(self.root_path,set_name)
 
     local indexes = self:get(set_name, 'object_ids', idx)
+
     if is_value then
         local out = {}
         for i=1, indexes:size(1) do
@@ -173,7 +187,11 @@ function DataLoader:object(set_name, idx, is_value)
             end
             table.insert(out, data)
         end
-        return out
+        if #out > 1 then
+            return out
+        else
+            return out[1]
+        end
     else
         return indexes
     end
@@ -191,9 +209,8 @@ function DataLoader:size(set_name, field_name)
     ----------
     set_name : str
         Name of the set.
-    field_name : str
+    field_name : str, optional
         Name of the data field.
-        (optional, default='object_ids')
 
     Returns:
     --------
