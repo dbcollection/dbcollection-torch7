@@ -24,6 +24,7 @@ function DataLoader:__init(name, task, data_dir, cache_path)
         Path of the dataset's data directory on disk.
     cache_path : str
         Path of the metadata cache file stored on disk.
+
 ]]
     assert(name, ('Must input a valid dataset name: %s'):format(name))
     assert(task, ('Must input a valid task name: %s'):format(task))
@@ -86,9 +87,6 @@ function DataLoader:get(set_name, field_name, idx)
     torch.Tensor
         Value/list of a field from the metadata cache file.
 
-    Raises
-    ------
-        None
 ]]
     assert(set_name, 'Must input a valid set name')
     assert(field_name, 'Must input a valid field name')
@@ -163,9 +161,6 @@ function DataLoader:object(set_name, idx, is_value)
     table
         Returns a table of indexes (or values, i.e. tensors, if is_value=True).
 
-    Raises
-    ------
-        None
 ]]
     assert(set_name, 'Must input a valid set name')
     local is_value = is_value or false
@@ -217,9 +212,6 @@ function DataLoader:size(set_name, field_name)
     table
         Returns the the size of the object list.
 
-    Raises
-    ------
-        None
 ]]
     assert(set_name, ('Must input a valid set name: %s'):format(set_name))
 
@@ -245,9 +237,6 @@ function DataLoader:list(set_name)
     table
         List of all data fields names of the dataset.
 
-    Raises
-    ------
-        None
 ]]
     assert(set_name, ('Must input a valid set name: %s'):format(set_name))
 
@@ -292,4 +281,161 @@ function DataLoader:object_field_id(set_name, field_name)
         end
     end
     error(('Field name \'%s\' does not exist.'):format(field_name))
+end
+
+------------------------------------------------------------------------------------------------------------
+
+--[[ Get the maximum length of all elements (strings only). ]]
+local function get_max_size(tableA, key)
+    local max = 0
+    for k=1, #tableA do
+        max = math.max(max, #tableA[k][key])
+    end
+    return max
+end
+
+local function string_pad(str, len, char)
+    if char == nil then char = ' ' end
+    return str .. string.rep(char, len - #str)
+end
+
+local function is_in_table(tableA, value)
+    assert(tableA)
+    assert(value)
+    for k, v in pairs(tableA) do
+        if v == value then
+            return true
+        end
+    end
+    return false
+end
+
+
+--[[ Split the field names into two separate lists for display. ]]--
+function DataLoader:_get_fields_lists_info(set_name)
+    assert(set_name)
+
+    -- get all field names
+    local field_names = self:list(set_name)
+    table.sort(field_names)  --sort the list alphabetically
+
+    -- split fields names into two tables
+    local fields_info, list_info = {}, {}
+    for k=1, #field_names do
+        local field_name = field_names[k]
+        local f = self.file:read(self.root_path .. '/' .. set_name .. '/' .. field_name)
+        local size = f:dataspaceSize()
+        local ranges = {1}
+        for i=2, #size do
+            table.insert(ranges, {1, size[i]})
+        end
+        local tensor = f:partial(unpack(ranges))
+        local s_shape = ''
+        for i=1, #size do
+            s_shape = s_shape .. tostring(size[i])
+            if i < #size then
+                s_shape = s_shape .. ', '
+            end
+        end
+        s_shape = '{' .. s_shape .. '}'
+        local s_type = tensor:type()
+        if field_name:find('list_') then
+            table.insert(list_info, {name = field_name,
+                                     shape = 'shape = ' .. s_shape,
+                                     type = 'dtype = ' .. s_type})
+        else
+            local s_obj = ''
+            if is_in_table(self.object_fields[set_name], field_name) then-- pcall(self:object_field_id, set_name, field_name) then
+                s_obj = ("(in 'object_ids', position = %d)"):format(self:object_field_id(set_name, field_name))
+            end
+            table.insert(fields_info, {name = field_name,
+                                       shape = 'shape = ' .. s_shape,
+                                       type = 'dtype = ' .. s_type,
+                                       obj = s_obj})
+        end
+    end
+    return fields_info, list_info
+end
+
+
+--[[ Prints information about the data fields of a set. ]]--
+function DataLoader:_print_info(set_name)
+--[[
+    Prints information about the data fields of a set.
+
+    Displays information of all fields available like field name,
+    size and shape of all sets. If a 'set_name' is provided, it
+    displays only the information for that specific set.
+
+    This method provides the necessary information about a data set
+    internals to help determine how to use/handle a specific field.
+
+    Parameters
+    ----------
+    set_name : str
+        Name of the set.
+
+]]
+    assert(set_name)
+
+    -- get a list of field names and a list of list fields
+    local fields_info, list_info = self:_get_fields_lists_info(set_name)
+
+    print(('\n> Set: %s'):format(set_name))
+
+    -- prints all fields except list_*
+    local maxsize_name = get_max_size(fields_info, 'name') + 8
+    local maxsize_shape = get_max_size(fields_info, 'shape') + 3
+    local maxsize_type = get_max_size(fields_info, 'type') + 3
+    for k=1, #fields_info do
+        local s_name = string_pad('   - ' .. fields_info[k].name .. ',', maxsize_name, ' ')
+        local s_shape = string_pad(fields_info[k].shape .. ',', maxsize_shape, ' ')
+        local s_obj = fields_info[k].obj
+        local s_type
+        if #s_obj > 1 then
+            s_type = string_pad(fields_info[k].type .. ',', maxsize_type, ' ')
+        else
+            s_type = string_pad(fields_info[k].type, maxsize_type, ' ')
+        end
+        print(string.format('%s %s %s %s', s_name, s_shape, s_type, s_obj))
+    end
+
+    -- prints only list fields
+    if next(list_info) then
+        print('\n   (Pre-ordered lists)')
+        local maxsize_name = get_max_size(list_info, 'name') + 8
+        local maxsize_shape = get_max_size(list_info, 'shape') + 3
+        for k=1, #list_info do
+            local s_name = string_pad('   - ' .. list_info[k].name .. ',', maxsize_name, ' ')
+            local s_shape = string_pad(list_info[k].shape .. ',', maxsize_shape, ' ')
+            local s_type  = list_info[k].type
+            print(string.format('%s %s %s', s_name, s_shape, s_type))
+        end
+    end
+end
+
+
+function DataLoader:info(set_name)
+--[[
+    Prints information about the data fields of a set.
+
+    Displays information of all fields available like field name,
+    size and shape of all sets. If a 'set_name' is provided, it
+    displays only the information for that specific set.
+
+    This method provides the necessary information about a data set
+    internals to help determine how to use/handle a specific field.
+
+    Parameters
+    ----------
+    set_name : str
+        Name of the set.
+]]
+    if set_name then
+        self:_print_info(set_name)
+    else
+        for _, set_name in pairs(self.sets) do
+            self:_print_info(set_name)
+        end
+    end
 end
