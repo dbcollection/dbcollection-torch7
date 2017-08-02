@@ -381,31 +381,38 @@ function dbcollection.remove(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
-            Remove/delete a dataset from the cache.
+            Remove/delete a dataset and/or task from the cache.
 
             Removes the datasets cache information from the dbcollection.json file.
             The dataset's data files remain on disk if 'delete_data' is set to False,
             otherwise it removes also the data files.
 
+            Also, instead of deleting the entire dataset, removing a specific task
+            from disk is also possible by specifying which task to delete. This removes
+            the task entry for the dataset and removes the corresponding hdf5 file from
+            disk.
+
             Parameters
             ----------
             name : str
                 Name of the dataset to delete.
-            delete_data : bool
+            task : str, (optional, default='')
+                Name of the task to delete.
+            delete_data : bool, (optional, default=false)
                 Delete all data files from disk for this dataset if True.
-                (optional, default=false)
-            is_test : bool
+            is_test : bool, (optional, default=false)
                 Flag used for tests.
-                (optional, default=false)
 
         ]],
         {name="name", type="string",
-        help="Name of the dataset."},
+         help="Name of the dataset."},
+        {name="task", type="string", default='None'
+         help="Name of the task to delete."},
         {name="delete_data", type="boolean", default=false,
-        help="Delete all data files from disk for this dataset if True.",
+         help="Delete all data files from disk for this dataset if True.",
         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
+         help="Flag used for tests.",
         opt = true}
     }
 
@@ -415,8 +422,10 @@ function dbcollection.remove(...)
     assert(args.name, ('Must input a valid dataset name: %s'):format(args.name))
 
     local command = ('import dbcollection as dbc;' ..
-                    'dbc.remove(name=\'%s\', delete_data=%s,is_test=%s)')
-                    :format(args.name, tostring_py(args.delete_data), tostring_py(args.is_test))
+                    'dbc.remove(name=\'%s\',task=%s,delete_data=%s,is_test=%s)')
+                    :format(args.name, tostring_none(args.task),
+                            tostring_py(args.delete_data),
+                            tostring_py(args.is_test))
 
     os.execute(('python -c "%s"'):format(command))
 end
