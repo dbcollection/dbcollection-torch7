@@ -15,6 +15,17 @@ local json = require 'json'
 -- utility functions
 -----------------------------------------------------------
 
+function os.capture(cmd, raw)
+  local f = assert(io.popen(cmd, 'r'))
+  local s = assert(f:read('*a'))
+  f:close()
+  if raw then return s end
+  s = string.gsub(s, '^%s+', '')
+  s = string.gsub(s, '%s+$', '')
+  s = string.gsub(s, '[\n\r]+', ' ')
+  return s
+end
+
 -- cache file path
 local function get_cache_file_path(options)
     local home_dir = os.getenv('HOME')
@@ -78,6 +89,12 @@ local function exists_task(cache, name, task)
     end
 end
 
+--[[ Return the correct name of the default task for a dataset. ]]
+local function fetch_default_task_name(name)
+    local cmd = 'from dbcollection.manager import fetch_default_task_name;' ..
+                ('print(fetch_default_task_name(\'%s\'))'):format(name)
+    return os.capture(string.format('python -c "%s"', cmd))
+end
 
 -----------------------------------------------------------
 -- API functions
@@ -142,6 +159,12 @@ function dbcollection.load(...)
 
     -- read the cache file (dbcollection.json)
     local cache = json.load(home_path)
+
+    -- convert task if equal to 'default'
+    if args.task == 'default' then
+        local task_name = fetch_default_task_name(args.name)
+        args.task = task_name
+    end
 
     -- check if the dataset exists in the cache
     if not cache['dataset'][args.name] then
