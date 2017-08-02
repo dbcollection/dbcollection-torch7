@@ -24,6 +24,7 @@ The [data loading API](#db.loader) contains a few methods for data retrieval/pro
 - [size](#db.loader.size): size of a field.
 - [list](#db.loader.list): lists all fields' names.
 - [object_fields_id](#db.loader.object_field_id): retrieves the index position of a field in the `object_ids` list.
+- [info](#db.loader.info): prints information about the data fields of a set.
 
 
 <a name="db"></a>
@@ -43,7 +44,7 @@ The library is structured as a table. In this documentation we use the above con
 ### load
 
 ```lua
-loader = dbcollection.load(name, task, data_dir, verbose, is_test)
+loader = dbc.load(name, task, data_dir, verbose, is_test)
 ```
 
 Returns a loader instant of a `dbcollection.DatasetLoader` class with methods to retrieve/probe data and other informations from the selected dataset.
@@ -64,15 +65,15 @@ Returns a loader instant of a `dbcollection.DatasetLoader` class with methods to
 You can simply load a dataset by its name like in the following example.
 
 ```lua
-local mnist = dbc.load('mnist')
+>>> mnist = dbc.load('mnist')
 ```
 
 In cases where you don't have the dataset's data on disk yet (and the selected dataset can be downloaded by the API), you can specify which directory the datset's data files should be stored to and which task should be loaded for this dataset.
 
 ```lua
-local cifar10 = dbc.load{name='cifar10',
-                         task='classification',
-                         data_dir='<my_home>/datasets/'}
+>>> cifar10 = dbc.load{name='cifar10',
+                       task='classification',
+                       data_dir='<my_home>/datasets/'}
 ```
 
 > Note: If you don't specify the directory path where to store the data files, then the files will be stored in the `dbcollection/<dataset>/data` dir where the metadata files are located.
@@ -82,7 +83,7 @@ local cifar10 = dbc.load{name='cifar10',
 ### download
 
 ```lua
-dbcollection.download(name, data_dir, extract_data, verbose, is_test)
+dbc.download(name, data_dir, extract_data, verbose, is_test)
 ```
 
 This method will download a dataset's data files to disk. After download, it updates the cache file with the dataset's name and path where the data is stored.
@@ -97,27 +98,26 @@ This method will download a dataset's data files to disk. After download, it upd
 - `is_test`: Flag used for tests. (*type=boolean, default=false*)
 
 
-
 #### Usage examples
 
 A simple usage example for downloading a dataset (without providing a storage path for the data) requires only the name of the target dataset and it will download its data files and then extract them to disk without any supervision required.
 
 ```lua
-dbc.download('cifar10')
+>>> dbc.download('cifar10')
 ```
 
 It is good practice to specify where the data will be download to by providing a existing directory path to `data_dir`. (This information is stored in the `dbcollection.json` file stored in your home path.)
 
 ```lua
-dbc.download({name='cifar10', data_dir='<some_dir>'})
+>>> dbc.download({name='cifar10', data_dir='<some_dir>'})
 ```
 
 In cases where you only want to download the dataset's files without extracting its contents, you can set `extract_data=false` and skip the data extraction/unpacking step.
 
 ```lua
-dbc.download({name='cifar10',
-              data_dir='<some_dir>',
-              extract_data=false})
+>>> dbc.download{name='cifar10',
+                 data_dir='<some_dir>',
+                 extract_data=false}
 ```
 
 > Note: this package uses a text progressbar when downloading files from urls for visual purposes (file size, elapsed time, % download, etc.). To disable this feature, set `verbose=false`.
@@ -127,7 +127,7 @@ dbc.download({name='cifar10',
 ### process
 
 ```lua
-dbcollection.process(name, task, verbose. is_test)
+dbc.process(name, task, verbose. is_test)
 ```
 
 Processes a dataset's metadata and stores it to file. This metadata is stored in a HDF5 file for each task composing the dataset's tasks. For more information about a dataset's metadata format please check the list of available datasets in the [docs](http://dbcollection.readthedocs.io/en/latest/available_datasets.html).
@@ -145,13 +145,13 @@ Processes a dataset's metadata and stores it to file. This metadata is stored in
 To process (or reprocess) a dataset's metadata simply do:
 
 ```lua
-dbc.process('cifar10')
+>>> dbc.process('cifar10')
 ```
 
 This will process all tasks for a given dataset (default='all'). To process only a specific task, you need to specify the task name you want to setup. This is handy when one wants to process only a single task of a bunch of tasks and speed up the processing/loading stage.
 
 ```lua
-dbc.process({name='cifar10', task='default'}) -- process only the 'default' task
+>>> dbc.process({name='cifar10', task='default'}) -- process only the 'default' task
 ```
 
 > Note: this method allows the user to reset a dataset's metadata file content in case of manual or accidental changes to the structure of the data. Most users won't have the need for such functionality on their basic usage of this package.
@@ -160,7 +160,7 @@ dbc.process({name='cifar10', task='default'}) -- process only the 'default' task
 ### add
 
 ```lua
-dbcollection.add(name, task, data_dir, verbose)
+dbc.add(name, task, data_dir, verbose)
 ```
 
 This method provides an easy way to add a custom dataset/task to the `dbcollection.json` cache file without having to manually add them themselves (although it is super easy to do it and recommended!).
@@ -180,10 +180,10 @@ This method provides an easy way to add a custom dataset/task to the `dbcollecti
 Adding a custom dataset or a custom task to a dataset requires the user to introduce the dataset's `name`, `task` name, `data_dir` where the data files are stored and the metadata's `file_path` on disk.
 
 ```lua
-dbc.add{name='custom1',
-        task='default',
-        data_dir='<data_dir>',
-        file_path='<metadata_file_path>'}
+>>> dbc.add{name='custom1',
+            task='default',
+            data_dir='<data_dir>',
+            file_path='<metadata_file_path>'}
 ```
 
 > Note: In cases where no external files are required besides the metadata's data, you can set `data_dir`="".
@@ -193,7 +193,7 @@ dbc.add{name='custom1',
 ### remove
 
 ```lua
-dbcollection.remove(name, task, data_dir, verbose)
+dbc.remove(name, task, data_dir, verbose)
 ```
 
 This method allows for a dataset to be removed from the list of available datasets for load in the cache. It also allows for the user to delete the dataset's files on disk if desired.
@@ -211,13 +211,13 @@ This method allows for a dataset to be removed from the list of available datase
 To remove a dataset simply do:
 
 ```lua
-dbc.remove('cifar10')
+>>> dbc.remove('cifar10')
 ```
 
 If you want to remove the dataset completely from disk, you can set the `delete_data` parameter to `true`.
 
 ```lua
-dbc.remove{name='cifar10', delete_data=true}
+>>> dbc.remove{name='cifar10', delete_data=true}
 ```
 
 
@@ -225,7 +225,7 @@ dbc.remove{name='cifar10', delete_data=true}
 ### config_cache
 
 ```lua
-dbcollection.config_cache(field, value, delete_cache, delete_cache_dir, delete_cache_file, reset_cache, is_test)
+dbc.config_cache(field, value, delete_cache, delete_cache_dir, delete_cache_file, reset_cache, is_test)
 ```
 
 Configures the cache file via API. This method allows to configure the cache file directly by selecting any data field and (re)setting its value. The user can also manually configure the `dbcollection.json` cache file in the filesystem (recommended).
@@ -254,39 +254,40 @@ Also, there is an option to completely remove the cache file+folder from the dis
 For example, Lets change the directory where the dbcollection's metadata main folder is stored on disk. This is useful to store/move all the metadata files to another disk.
 
 ```lua
-dbc.config_cache{field='default_cache_dir',
-                 value='<home_dir>/new/path/db/'}
+>>> dbc.config_cache{field='default_cache_dir',
+                     value='<home_dir>/new/path/db/'}
 ```
 
 If a user wants to remove all files relating to the `dbcollection` package, one can use the `config_cache` to accomplish this in a simple way:
 
 ```lua
-dbc.config_cache{delete_cache=true}
+>>> dbc.config_cache{delete_cache=true}
 ```
 
 or if the user wants to remove only the cache file:
 
 ```lua
-dbc.config_cache{delete_cache_file=true}
+>>> dbc.config_cache{delete_cache_file=true}
 ```
 
 or to remove the cache directory where all the metadata files from all datasets are stored (**I hope you are sure about this one...**):
 
 ```lua
-dbc.config_cache{delete_cache_dir=true}
+>>> dbc.config_cache{delete_cache_dir=true}
 ```
 
 or to simply reset the cache file contents withouth removing the file:
 
 ```lua
-dbc.config_cache{reset_cache=true}
+>>> dbc.config_cache{reset_cache=true}
 ```
+
 
 <a name="db.query"></a>
 ### query
 
 ```lua
-dbcollection.query(pattern, is_test)
+dbc.query(pattern, is_test)
 ```
 
 Do simple queries to the cache and displays them to the screen.
@@ -303,29 +304,33 @@ Do simple queries to the cache and displays them to the screen.
 Simple query about the existence of a dataset.
 
 ```lua
-dbc.query('mnist')
+>>> dbc.query('mnist')
 ```
 
 It can also retrieve information by category/keyword. For example, this is useful to see which datasets have the same task.
 
 ```lua
-dbc.query('detection')
+>>> dbc.query('detection')
 ```
 
 > Note: this is the same as scanning the `dbcollection.json` cache file yourself, but it has the advantage of grouping information about a certain pattern for you.
+
 
 <a name="db.info"></a>
 ### info
 
 ```lua
-dbcollection.info(list_datasets, is_test)
+dbc.info(name, paths_info, datasets_info, categories_info, is_test)
 ```
 
 Prints the cache contents to screen. It can also print a list of all available datasets to download/process in the `dbcollection` package.
 
 #### Parameters
 
-- `list_datasets`: Print available datasets in the `dbcollection` package. (*type=boolean, default=false*)
+- `name`: Name of the dataset to display information. (*type=string, default='None'*)
+- `paths_info`: Print the paths info to screen. (*type=boolean, default=true*)
+- `datasets_info`: Print the datasets info to screen. If a string is provided, it selects only the information of that string (dataset name). (*type=string, default='true'*)
+- `categories_info`: Print the paths info to screen. If a string is provided, it selects only the information of that string (dataset name). (*type=string, default='true'*)
 - `is_test`: Flag used for tests. (*type=boolean, default=false*)
 
 
@@ -334,14 +339,17 @@ Prints the cache contents to screen. It can also print a list of all available d
 Print the cache file contents to the screen:
 
 ```lua
-dbc.info()
+>>> dbc.info()
 ```
 
 Display all available datasets to download/process:
 
 ```lua
-dbc.info(true)
+>>> dbc.info('all')
 ```
+
+> TODO: Add more examples for the other options
+
 
 <a name="db.loader"></a>
 ## Data loading API
@@ -384,21 +392,40 @@ Retrieves data from a dataset's HDF5 metadata file. This method accesses the HDF
 The first, and most common, usage of this method if to retrieve a single piece of data from a data field. Lets retrieve the first image+label from the `MNIST` dataset.
 
 ```lua
-local mnist = dbc.load('mnist')  -- returns a DatasetLoader class
-local img = mnist:get('train', 'images', 1)
-local label = mnist:get('train', 'labels', 1)
+>>> mnist = dbc.load('mnist')  -- returns a DatasetLoader class
+>>> img = mnist:get('train', 'images', 1)
+>>> label = mnist:get('train', 'labels', 1)
+>>> #img
+  1
+ 28
+ 28
+[torch.LongStorage of size 3]
+
+>>> label
+ 5
+[torch.ByteTensor of size 1]
 ```
 
 This method can also be used to retrieve a range of data/values.
 
 ```lua
-local imgs = mnist:get('train', 'images', {1, 20})
+>>> #mnist:get('train', 'images', {1, 20})
+ 20
+ 28
+ 28
+[torch.LongStorage of size 3]
+
 ```
 
 Or all values if desired.
 
 ```lua
-local imgs = mnist:get('train', 'images')
+>>> #mnist:get('train', 'images')
+ 60000
+    28
+    28
+[torch.LongStorage of size 3]
+
 ```
 
 <a name="db.loader.object"></a>
@@ -424,20 +451,43 @@ This method is particularly useful when different fields are linked (like in det
 Fetch all indexes of an object.
 
 ```lua
-local mnist = dbc.load('mnist')
-local obj_idxs = mnist:object('train', 1)
+>>> mnist = dbc.load('mnist')
+>>> mnist:object('train', 1)
+ 1  6
+[torch.IntTensor of size 1x2]
 ```
 
 Multiple lists can be retrieved just like with the [get()](#db.loader.get) method.
 
 ```lua
-local objs_idxs = mnist:object('train', {1, 10})
+>>> objs_idxs = mnist:object('train', {1, 10})
+  1   6
+  2   1
+  3   5
+  4   2
+  5  10
+  6   3
+  7   2
+  8   4
+  9   2
+ 10   5
+[torch.IntTensor of size 10x2]
+
 ```
 
 It is also possible to retrieve the values/tensors instead of the indexes.
 
 ```lua
-local objs_data = mnist:object('train', {1, 10}, true)
+>>> obj_data = mnist:object('train', 1, true)
+>>> #obj_data[1]
+  1
+ 28
+ 28
+[torch.LongStorage of size 3]
+
+>>> obj_data[2]
+ 2
+[torch.ByteTensor of size 1]
 ```
 
 
@@ -462,16 +512,30 @@ Returns the size of a field.
 Get the size of the images tensor in `MNIST` train set.
 
 ```lua
-local mnist = dbc.load('mnist')
-local images_size = mnist:size('train', 'images')
+>>> mnist = dbc.load('mnist')
+>>> mnist:size('train', 'images')
+{
+  1 : 60000
+  2 : 28
+  3 : 28
+}
 ```
 
 Get the size of the objects in `MNIST` train set.
 
 ```lua
-local obj_size = mnist:size('train', 'object_ids')
+>>> mnist:size('train', 'object_ids')
+{
+  1 : 60000
+  2 : 2
+}
+
 -- or
-local obj_size = mnist:size('train')
+>>> mnist:size('train')
+{
+  1 : 60000
+  2 : 2
+}
 ```
 
 
@@ -494,8 +558,62 @@ Lists all field names in a set.
 Get all fields available in the `MNIST` test set.
 
 ```lua
-local mnist = dbc.load('mnist')
-local images_size = mnist:list('test')
+>>> mnist = dbc.load('mnist')
+>>> mnist:list('test')
+{
+  1 : "classes"
+  2 : "list_images_per_class"
+  3 : "labels"
+  4 : "images"
+  5 : "object_ids"
+  6 : "object_fields"
+}
+```
+
+
+<a name="db.loader.info"></a>
+### info
+
+```lua
+loader.info(set_name)
+```
+
+Prints information about the data fields of a set.
+
+Displays information of all fields available like field name, size and shape of all sets. If a `set_name` is provided, it displays only the information for that specific set.
+
+#### Parameters
+
+- `set_name`: Name of the set. (*type=string*)
+
+#### Usage examples
+
+Display all field information for the `MNIST` dataset.
+
+```lua
+>>> mnist = dbc.load('mnist')
+>>> mnist:info()
+
+> Set: test
+   - classes,         shape = {10, 2},           dtype = torch.ByteTensor
+   - images,          shape = {10000, 28, 28},   dtype = torch.ByteTensor,   (in 'object_ids', position = 1)
+   - labels,          shape = {10000},           dtype = torch.ByteTensor,   (in 'object_ids', position = 2)
+   - object_fields,   shape = {2, 7},            dtype = torch.ByteTensor
+   - object_ids,      shape = {10000, 2},        dtype = torch.IntTensor
+
+   (Pre-ordered lists)
+   - list_images_per_class,   shape = {10, 1135},   dtype = torch.IntTensor
+
+> Set: train
+   - classes,         shape = {10, 2},           dtype = torch.ByteTensor
+   - images,          shape = {60000, 28, 28},   dtype = torch.ByteTensor,   (in 'object_ids', position = 1)
+   - labels,          shape = {60000},           dtype = torch.ByteTensor,   (in 'object_ids', position = 2)
+   - object_fields,   shape = {2, 7},            dtype = torch.ByteTensor
+   - object_ids,      shape = {60000, 2},        dtype = torch.IntTensor
+
+   (Pre-ordered lists)
+   - list_images_per_class,   shape = {10, 6742},   dtype = torch.IntTensor
+
 ```
 
 
@@ -518,10 +636,18 @@ Retrieves the index position of a field in the `object_ids` list. This position 
 This example shows how to use this method in order to retrieve the correct fields from an object index list.
 
 ```lua
-local mnist = dbc.load('mnist')
-print('object: images field idx: ', mnist:object_field_id('train', 'images'))
-print('object: labels field idx: ', mnist:object_field_id('train', 'labels'))
-print('Check if the positions match with the list of fields: ', mnist.object_fields['train'])
+>>> mnist = dbc.load('mnist')
+>>> print('object field idx (images): ', mnist:object_field_id('train', 'images'))
+object field idx (images): 	1
+
+>>> print('object field idx (labels): ', mnist:object_field_id('train', 'labels'))
+object field idx (labels): 	2
+
+>>> mnist.object_fields['train']
+{
+  1 : "images"
+  2 : "labels"
+}
 ```
 
 
@@ -545,7 +671,7 @@ Although one might only need to convert `torch.ByteTensors` to strings, this mod
 ### convert_string_to_ascii
 
 ```lua
-tensor = dbcollection.utils.string_ascii.convert_string_to_ascii(input)
+tensor = dbc.utils.string_ascii.convert_string_to_ascii(input)
 ```
 
 Convert a string or table of string to a `torch.CharTensor`.
@@ -559,10 +685,9 @@ Convert a string or table of string to a `torch.CharTensor`.
 Single string.
 
 ```lua
-local str = 'string1'
-local ascii_tensor = dbc.utils.string_ascii.convert_str_to_ascii(str)
-
-print(ascii_tensor)
+>>> str = 'string1'
+>>> ascii_tensor = dbc.utils.string_ascii.convert_str_to_ascii(str)
+>>> print(ascii_tensor)
  115  116  114  105  110  103   49    0
 [torch.CharTensor of size 1x8]
 
@@ -571,10 +696,9 @@ print(ascii_tensor)
 Table of strings.
 
 ```lua
-local str = {'string1', 'string2', 'string3'}
-local ascii_tensor = dbc.utils.string_ascii.convert_str_to_ascii(str)
-
-print(ascii_tensor)
+>>> str = {'string1', 'string2', 'string3'}
+>>> ascii_tensor = dbc.utils.string_ascii.convert_str_to_ascii(str)
+>>> print(ascii_tensor)
  115  116  114  105  110  103   49    0
  115  116  114  105  110  103   50    0
  115  116  114  105  110  103   51    0
@@ -586,7 +710,7 @@ print(ascii_tensor)
 ### convert_ascii_to_string
 
 ```lua
-str = dbcollection.utils.string_ascii.convert_ascii_to_string(input)
+str = dbc.utils.string_ascii.convert_ascii_to_string(input)
 ```
 
 Convert a `torch.CharTensor` or `torch.ByteTensor` to a table of strings.
@@ -601,10 +725,9 @@ Convert a `torch.CharTensor` to string.
 
 ```lua
 -- ascii format of 'string1'
-local tensor = torch.CharTensor({{115, 116, 114, 105, 110, 103, 49, 0}})
-local str = dbc.utils.string_ascii.convert_ascii_to_str(tensor)
-
-print(str)
+>>> tensor = torch.CharTensor({{115, 116, 114, 105, 110, 103, 49, 0}})
+>>> str = dbc.utils.string_ascii.convert_ascii_to_str(tensor)
+>>> print(str)
 {
   1 : "string1"
 }
