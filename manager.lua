@@ -113,9 +113,6 @@ function dbcollection.load(...)
             DatasetLoader
                 Data loader class.
 
-            Raises
-            ------
-                None
         ]],
         {name="name", type="string",
         help="Name of the dataset."},
@@ -203,13 +200,6 @@ function dbcollection.download(...)
                 Flag used for tests.
                 (optional, default=false)
 
-            Returns
-            -------
-                None
-
-            Raises
-            ------
-                None
         ]],
         {name="name", type="string",
         help="Name of the dataset."},
@@ -264,13 +254,6 @@ function dbcollection.process(...)
                 Flag used for tests.
                 (optional, default=false)
 
-            Returns
-            -------
-                None
-
-            Raises
-            ------
-                None
         ]],
         {name="name", type="string",
         help="Name of the dataset."},
@@ -323,13 +306,6 @@ function dbcollection.add(...)
                 Flag used for tests.
                 (optional, default=false)
 
-            Returns
-            -------
-                None
-
-            Raises
-            ------
-                None
         ]],
         {name="name", type="string",
         help="Name of the dataset."},
@@ -399,13 +375,6 @@ function dbcollection.remove(...)
                 Flag used for tests.
                 (optional, default=false)
 
-            Returns
-            -------
-                None
-
-            Raises
-            ------
-                None
         ]],
         {name="name", type="string",
         help="Name of the dataset."},
@@ -476,13 +445,6 @@ function dbcollection.config_cache(...)
                 Flag used for tests.
                 (optional, default=false)
 
-            Returns
-            -------
-                None
-
-            Raises
-            ------
-                None
         ]],
         {name="field", type="string", default="None",
         help="Name of the field to update/modify in the cache file.",
@@ -541,13 +503,6 @@ function dbcollection.query(...)
                 Flag used for tests.
                 (optional, default=false)
 
-            Returns
-            -------
-                None
-
-            Raises
-            ------
-                None
         ]],
         {name="pattern", type="string", default="info",
         help="Field name used to search for a matching pattern in cache data.",
@@ -612,13 +567,6 @@ function dbcollection.info(...)
                 Flag used for tests.
                 (optional, default=false)
 
-            Returns
-            -------
-                None
-
-            Raises
-            ------
-                None
         ]],
         {name="name", type="string", default='None',
         help="Name of the dataset to display information.",
