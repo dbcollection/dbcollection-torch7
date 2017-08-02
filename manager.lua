@@ -15,6 +15,17 @@ local json = require 'json'
 -- utility functions
 -----------------------------------------------------------
 
+function os.capture(cmd, raw)
+  local f = assert(io.popen(cmd, 'r'))
+  local s = assert(f:read('*a'))
+  f:close()
+  if raw then return s end
+  s = string.gsub(s, '^%s+', '')
+  s = string.gsub(s, '%s+$', '')
+  s = string.gsub(s, '[\n\r]+', ' ')
+  return s
+end
+
 -- cache file path
 local function get_cache_file_path(options)
     local home_dir = os.getenv('HOME')
@@ -78,6 +89,12 @@ local function exists_task(cache, name, task)
     end
 end
 
+--[[ Return the correct name of the default task for a dataset. ]]
+local function fetch_default_task_name(name)
+    local cmd = 'from dbcollection.manager import fetch_default_task_name;' ..
+                ('print(fetch_default_task_name(\'%s\'))'):format(name)
+    return os.capture(string.format('python -c "%s"', cmd))
+end
 
 -----------------------------------------------------------
 -- API functions
@@ -115,19 +132,19 @@ function dbcollection.load(...)
 
         ]],
         {name="name", type="string",
-        help="Name of the dataset."},
+         help="Name of the dataset."},
         {name="task", type="string", default='default',
-        help="Name of the task to load.",
-        opt = true},
+         help="Name of the task to load.",
+         opt = true},
         {name="data_dir", type="string", default='',
-        help="Path to store the data (if the data doesn't exist and the download flag is equal True).",
-        opt = true},
+         help="Path to store the data (if the data doesn't exist and the download flag is equal True).",
+         opt = true},
         {name="verbose", type="boolean", default=true,
-        help="Displays text information (if true).",
-        opt = true},
+         help="Displays text information (if true).",
+         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
-        opt = true}
+         help="Flag used for tests.",
+         opt = true}
     }
 
     -- parse options
@@ -142,6 +159,12 @@ function dbcollection.load(...)
 
     -- read the cache file (dbcollection.json)
     local cache = json.load(home_path)
+
+    -- convert task if equal to 'default'
+    if args.task == 'default' then
+        local task_name = fetch_default_task_name(args.name)
+        args.task = task_name
+    end
 
     -- check if the dataset exists in the cache
     if not cache['dataset'][args.name] then
@@ -202,19 +225,19 @@ function dbcollection.download(...)
 
         ]],
         {name="name", type="string",
-        help="Name of the dataset."},
+         help="Name of the dataset."},
         {name="data_dir", type="string", default='None',
-        help="Path to store the data (if the data doesn't exist and the download flag is equal True).",
-        opt = true},
+         help="Path to store the data (if the data doesn't exist and the download flag is equal True).",
+         opt = true},
         {name="extract_data", type="boolean", default=true,
-        help="Extracts/unpacks the data files (if true).",
-        opt = true},
+         help="Extracts/unpacks the data files (if true).",
+         opt = true},
         {name="verbose", type="boolean", default=true,
-        help="Displays text information (if true).",
-        opt = true},
+         help="Displays text information (if true).",
+         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
-        opt = true}
+         help="Flag used for tests.",
+         opt = true}
     }
 
     -- parse options
@@ -256,16 +279,16 @@ function dbcollection.process(...)
 
         ]],
         {name="name", type="string",
-        help="Name of the dataset."},
+         help="Name of the dataset."},
         {name="task", type="string", default='all',
-        help="Name of the dataset.",
-        opt = true},
+         help="Name of the dataset.",
+         opt = true},
         {name="verbose", type="boolean", default=true,
-        help="Displays text information (if true).",
-        opt = true},
+         help="Displays text information (if true).",
+         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
-        opt = true}
+         help="Flag used for tests.",
+         opt = true}
     }
 
     -- parse options
@@ -308,19 +331,19 @@ function dbcollection.add(...)
 
         ]],
         {name="name", type="string",
-        help="Name of the dataset."},
+         help="Name of the dataset."},
         {name="task", type="string",
-        help="Name of the task to load."},
+         help="Name of the task to load."},
         {name="data_dir", type="string",
-        help="Path of the stored data on disk."},
+         help="Path of the stored data on disk."},
         {name="file_path", type="string",
-        help="Path to the metadata HDF5 file."},
+         help="Path to the metadata HDF5 file."},
         {name="keywords", type="table", default={},
-        help="List of keywords to categorize the dataset.",
-        opt = true},
+         help="List of keywords to categorize the dataset.",
+         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
-        opt = true}
+         help="Flag used for tests.",
+         opt = true}
     }
 
     -- parse options
@@ -358,32 +381,39 @@ function dbcollection.remove(...)
     local initcheck = argcheck{
         pack=true,
         help=[[
-            Remove/delete a dataset from the cache.
+            Remove/delete a dataset and/or task from the cache.
 
             Removes the datasets cache information from the dbcollection.json file.
             The dataset's data files remain on disk if 'delete_data' is set to False,
             otherwise it removes also the data files.
 
+            Also, instead of deleting the entire dataset, removing a specific task
+            from disk is also possible by specifying which task to delete. This removes
+            the task entry for the dataset and removes the corresponding hdf5 file from
+            disk.
+
             Parameters
             ----------
             name : str
                 Name of the dataset to delete.
-            delete_data : bool
+            task : str, (optional, default='None')
+                Name of the task to delete.
+            delete_data : bool, (optional, default=false)
                 Delete all data files from disk for this dataset if True.
-                (optional, default=false)
-            is_test : bool
+            is_test : bool, (optional, default=false)
                 Flag used for tests.
-                (optional, default=false)
 
         ]],
         {name="name", type="string",
-        help="Name of the dataset."},
+         help="Name of the dataset."},
+        {name="task", type="string", default='None',
+         help="Name of the task to delete."},
         {name="delete_data", type="boolean", default=false,
-        help="Delete all data files from disk for this dataset if True.",
-        opt = true},
+         help="Delete all data files from disk for this dataset if True.",
+         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
-        opt = true}
+         help="Flag used for tests.",
+         opt = true}
     }
 
     -- parse options
@@ -392,8 +422,10 @@ function dbcollection.remove(...)
     assert(args.name, ('Must input a valid dataset name: %s'):format(args.name))
 
     local command = ('import dbcollection as dbc;' ..
-                    'dbc.remove(name=\'%s\', delete_data=%s,is_test=%s)')
-                    :format(args.name, tostring_py(args.delete_data), tostring_py(args.is_test))
+                    'dbc.remove(name=\'%s\',task=%s,delete_data=%s,is_test=%s)')
+                    :format(args.name, tostring_none(args.task),
+                            tostring_py(args.delete_data),
+                            tostring_py(args.is_test))
 
     os.execute(('python -c "%s"'):format(command))
 end
@@ -447,26 +479,26 @@ function dbcollection.config_cache(...)
 
         ]],
         {name="field", type="string", default="None",
-        help="Name of the field to update/modify in the cache file.",
-        opt = true},
+         help="Name of the field to update/modify in the cache file.",
+         opt = true},
         {name="value", type="string", default="None",
-        help="Value to update the field.",
-        opt = true},
+         help="Value to update the field.",
+         opt = true},
         {name="delete_cache", type="boolean", default=false,
-        help="Delete/remove the dbcollection cache file + directory.",
-        opt = true},
+         help="Delete/remove the dbcollection cache file + directory.",
+         opt = true},
         {name="delete_cache_dir", type="boolean", default=false,
-        help="Delete/remove the dbcollection cache directory.",
-        opt = true},
+         help="Delete/remove the dbcollection cache directory.",
+         opt = true},
         {name="delete_cache_file", type="boolean", default=false,
-        help="Delete/remove the dbcollection.json cache file.",
-        opt = true},
+         help="Delete/remove the dbcollection.json cache file.",
+         opt = true},
         {name="reset_cache", type="boolean", default=false,
-        help="Reset the cache file.",
-        opt = true},
+         help="Reset the cache file.",
+         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
-        opt = true}
+         help="Flag used for tests.",
+         opt = true}
     }
 
     -- parse options
@@ -505,11 +537,11 @@ function dbcollection.query(...)
 
         ]],
         {name="pattern", type="string", default="info",
-        help="Field name used to search for a matching pattern in cache data.",
-        opt = true},
+         help="Field name used to search for a matching pattern in cache data.",
+         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
-        opt = true}
+         help="Flag used for tests.",
+         opt = true}
     }
 
     -- parse options
@@ -569,26 +601,26 @@ function dbcollection.info(...)
 
         ]],
         {name="name", type="string", default='None',
-        help="Name of the dataset to display information.",
-        opt = true},
-        {name="paths_info", type="boolean", default=true,
-        help=" Print the paths info to screen.",
-        opt = true},
+         help="Name of the dataset to display information.",
+         opt = true},
+        {name="paths_info", type="string", default='true',
+         help=" Print the paths info to screen.",
+         opt = true},
         {name="datasets_info", type="string", default='true',
-        help="Print the datasets info to screen." ..
+         help="Print the datasets info to screen." ..
                 "If a string is provided, it selects" ..
                 "only the information of that string" ..
                 "(dataset name).",
-        opt = true},
+         opt = true},
         {name="categories_info", type="string", default='true',
-        help="Print the paths info to screen. " ..
+         help="Print the paths info to screen. " ..
                 "If a string is provided, it selects" ..
                 "only the information of that string" ..
                 "(dataset name).",
-        opt = true},
+         opt = true},
         {name="is_test", type="boolean", default=false,
-        help="Flag used for tests.",
-        opt = true},
+         help="Flag used for tests.",
+         opt = true},
     }
 
     -- parse options
@@ -597,7 +629,7 @@ function dbcollection.info(...)
     local command = ('import dbcollection as dbc;' ..
                      'dbc.info(name=%s, paths_info=%s, datasets_info=%s, categories_info=%s, is_test=%s)')
                      :format(tostring_none(args.name),
-                             tostring_py(args.paths_info),
+                             tostring_py2(args.paths_info),
                              tostring_py2(args.datasets_info),
                              tostring_py2(args.categories_info),
                              tostring_py(args.is_test))

@@ -45,8 +45,8 @@ end
 function mytest.test_convert_ascii_to_str__CharTensor_1D()
     local str = 'test_string'
     local str_tensor = torch.CharTensor(1,#str+1):fill(0)
-    ffi.copy(str_tensor[1]:data(), str)
-    tester:eq(str, tostring_(str_tensor)[1])
+    ffi.copy(str_tensor:data(), str)
+    tester:eq(str, tostring_(str_tensor))
 end
 
 function mytest.test_convert_ascii_to_str__CharTensor_2D()
