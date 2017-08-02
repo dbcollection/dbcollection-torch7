@@ -406,7 +406,7 @@ function dbcollection.remove(...)
         ]],
         {name="name", type="string",
          help="Name of the dataset."},
-        {name="task", type="string", default='None'
+        {name="task", type="string", default='None',
          help="Name of the task to delete."},
         {name="delete_data", type="boolean", default=false,
          help="Delete all data files from disk for this dataset if True.",
