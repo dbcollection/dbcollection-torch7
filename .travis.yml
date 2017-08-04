@@ -56,7 +56,7 @@ before_script:
 install:
   - echo "install dbcollection"
   - pip install dbcollection
-  - echo package installed""
+  - echo "package installed"
 script:
 - echo "install dbcollection-torch7"
 - ${INSTALL_PREFIX}/bin/luarocks make dbcollection-scm-1.rockspec
