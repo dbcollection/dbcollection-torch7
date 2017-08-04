@@ -21,5 +21,6 @@ download/process/management.
 
 require 'dbcollection.manager'
 require 'dbcollection.utils'
+require 'dbcollection.tests.test'
 
 return dbcollection
