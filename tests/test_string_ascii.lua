@@ -7,28 +7,22 @@
 
 -- initializations
 local ffi = require 'ffi'
-local string_ascii = require 'dbcollection.utils.string_ascii'
-local toascii_ = string_ascii.convert_str_to_ascii
-local tostring_ = string_ascii.convert_ascii_to_str
+local dbc = require 'dbcollection.env'
 
-local mytest = torch.TestSuite()
-local tester = torch.Tester()
-local precision = 1e-6
-torch.manualSeed(4)
+local tester
+local test = torch.TestSuite()
 
 
-------------
--- Tests
-------------
-
-function mytest.test_convert_str_to_ascii__string()
+function test.test_convert_str_to_ascii__string()
+    local toascii_ = dbc.utils.string_ascii.convert_str_to_ascii
     local str = 'test_string'
     local str_tensor = torch.CharTensor(1,#str+1):fill(0)
     ffi.copy(str_tensor[1]:data(), str)
     tester:eq(str_tensor, toascii_(str))
 end
 
-function mytest.test_convert_str_to_ascii__table()
+function test.test_convert_str_to_ascii__table()
+    local toascii_ = dbc.utils.string_ascii.convert_str_to_ascii
     local str = {'test_string1', 'test_string2', 'test_string3'}
     local max_length = #str[1] + 1
     local str_tensor = torch.CharTensor(#str, max_length):fill(0)
@@ -40,16 +34,16 @@ function mytest.test_convert_str_to_ascii__table()
     tester:eq(str_tensor, toascii_(str))
 end
 
-
-
-function mytest.test_convert_ascii_to_str__CharTensor_1D()
+function test.test_convert_ascii_to_str__CharTensor_1D()
+    local tostring_ = dbc.utils.string_ascii.convert_ascii_to_str
     local str = 'test_string'
     local str_tensor = torch.CharTensor(1,#str+1):fill(0)
     ffi.copy(str_tensor:data(), str)
     tester:eq(str, tostring_(str_tensor))
 end
 
-function mytest.test_convert_ascii_to_str__CharTensor_2D()
+function test.test_convert_ascii_to_str__CharTensor_2D()
+    local tostring_ = dbc.utils.string_ascii.convert_ascii_to_str
     local str = {'test_string1', 'test_string2', 'test_string3'}
     local max_length = #str[1] + 1
     local str_tensor = torch.CharTensor(#str, max_length):fill(0)
@@ -61,7 +55,8 @@ function mytest.test_convert_ascii_to_str__CharTensor_2D()
     tester:eq(str, tostring_(str_tensor))
 end
 
-function mytest.test_convert_ascii_to_str__ByteTensor_2D()
+function test.test_convert_ascii_to_str__ByteTensor_2D()
+    local tostring_ = dbc.utils.string_ascii.convert_ascii_to_str
     local str = {'test_string1', 'test_string2', 'test_string3'}
     local max_length = #str[1] + 1
     local str_tensor = torch.CharTensor(#str, max_length):fill(0)
@@ -73,10 +68,7 @@ function mytest.test_convert_ascii_to_str__ByteTensor_2D()
     tester:eq(str, tostring_(str_tensor:byte()))
 end
 
-------------------
--- Run Test Suite
-------------------
-
-
-tester:add(mytest)
-tester:run()
+return function(_tester_)
+   tester = _tester_
+   return test
+end
