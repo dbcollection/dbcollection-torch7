@@ -1,5 +1,4 @@
 package = "dbcollection"
-
 version = "scm-1"
 
 source = {
@@ -27,7 +26,8 @@ dependencies = {
     "torch >= 7.0",
     "json >= 1.0",
     "hdf5 >= 20-0",
-    "argcheck >= 1.0"
+    "argcheck >= 1.0",
+    "dok >= scm-1"
 }
 
 build = {
