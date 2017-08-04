@@ -13,8 +13,6 @@ cache:
 
 env:
   - TORCH_LUA_VERSION=LUAJIT21
-  - TORCH_LUA_VERSION=LUA51
-  - TORCH_LUA_VERSION=LUA52
 
 addons:
   apt:
@@ -61,7 +59,6 @@ before_script:
   - export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:$LD_LIBRARY_PATH
   - ${INSTALL_PREFIX}/bin/luarocks install torch
   - ${INSTALL_PREFIX}/bin/luarocks install hdf5
-  - ${INSTALL_PREFIX}/bin/luarocks install luaffi
 
 install:
   - echo "install dbcollection"
@@ -73,5 +70,4 @@ script:
   - ${INSTALL_PREFIX}/bin/luarocks make rocks/dbcollection-scm-1.rockspec
   - export PATH=${INSTALL_PREFIX}/bin:$PATH
   - export TESTLUA=$(which luajit lua | head -n 1)
-  - ${TESTLUA} -e "ffi = require 'ffi'; print('ffi loaded successfully')"
   - ${TESTLUA} -e "dbc = require 'dbcollection'; t=dbc.test(); if t.errors[1] then os.exit(1) end"
