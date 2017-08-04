@@ -62,4 +62,4 @@ script:
 - ${INSTALL_PREFIX}/bin/luarocks make dbcollection-scm-1.rockspec
 - export PATH=${INSTALL_PREFIX}/bin:$PATH
 - export TESTLUA=$(which luajit lua | head -n 1)
-- ${TESTLUA} -lnn -e "dbc = require 'dbcollection'; t=dbc.test(); if t.errors[1] then os.exit(1) end"
+- ${TESTLUA} -e "dbc = require 'dbcollection'; t=dbc.test(); if t.errors[1] then os.exit(1) end"
