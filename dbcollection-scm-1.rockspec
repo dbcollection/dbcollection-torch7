@@ -26,6 +26,7 @@ dependencies = {
     "lua >= 5.1",
     "torch >= 7.0",
     "json >= 1.0",
+    "hdf5 >= 20-0",
     "argcheck >= 1.0"
 }
 
