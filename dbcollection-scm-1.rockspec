@@ -3,28 +3,21 @@ package = "dbcollection"
 version = "scm-1"
 
 source = {
-    url = "git://github.com/farrajota/dbcollection.git",
+    url = "git://github.com/dbcollection/dbcollection-torch7.git",
     tag = "master"
  }
 
 description = {
     summary = "A Lua/Torch7 wrapper for dbcollection.",
     detailed = [[
-       This package provides a list of scripts to load the most common datasets
-       used in computer vision into memory. It comes along with several download
-       scripts to ease the burden of finding all necessary files from a particular
-       dataset and/or task.
+        This is a simple Lua wrapper for the Python's dbcollection module. The functionality
+        is almost the same, appart from some few minor differences related to Lua, namely
+        regarding setting up ranges when fetching data.
 
-       Warning: some datasets cannot be downloaded via scripts
-       due to lincensing concerns, although this is highlighted by the downloading
-       scripts for these datasets.
-
-       The dataset's metada is stored in a HDF5 file which contains the processed/raw
-       data provided by each dataset. This allows for fast access to the needed data
-       with a small impact on both access time and system's RAM memory usage, meaning
-       faster script intializations and optimization of the system's  resources.
+        Internally it calls the Python's dbcollection module for data download/process/management.
+        The, Lua/Torch7 interacts solely with the metadata hdf5 file to fetch data from disk.
     ]],
-    homepage = "https://github.com/farrajota/dbcollection",
+    homepage = "https://github.com/dbcollection/dbcollection-torch7",
     license = "MIT",
     maintainer = "M. Farrajota"
  }
