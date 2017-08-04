@@ -69,7 +69,7 @@ install:
 script:
   - echo "install dbcollection-torch7"
   - ${INSTALL_PREFIX}/bin/luarocks install hdf5
-  - ${INSTALL_PREFIX}/bin/luarocks make dbcollection-scm-1.rockspec
+  - ${INSTALL_PREFIX}/bin/luarocks make rocks/dbcollection-scm-1.rockspec
   - export PATH=${INSTALL_PREFIX}/bin:$PATH
   - export TESTLUA=$(which luajit lua | head -n 1)
   - ${TESTLUA} -e "dbc = require 'dbcollection'; t=dbc.test(); if t.errors[1] then os.exit(1) end"
