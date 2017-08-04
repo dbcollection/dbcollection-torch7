@@ -15,6 +15,7 @@ This package requires:
 - Python's dbcollection package installed.
 - [Torch7](https://github.com/torch/torch7)
 - json
+- hdf5
 - argcheck
 
 To install Torch7 just follow the steps listed [here](http://torch.ch/docs/getting-started.html#_).
@@ -23,6 +24,7 @@ The other packages should come pre-installed along with Torch7, but in case they
 
 ```lua
 luarocks install json
+luarocks install hdf5
 luarocks install argcheck
 ```
 
@@ -47,25 +49,25 @@ cd dbcollection-torch7 && luarocks make
 This package follows the same API as the Python version. Once installed, to use the package simply require *dbcollection*:
 
 ```lua
-dbc = require 'dbcollection'
+>>> dbc = require 'dbcollection'
 ```
 
 Then, just like with the Python's version, to load a dataset you simply do:
 
 ```lua
-mnist = dbc.load('mnist')
+>>> mnist = dbc.load('mnist')
 ```
 
 You can also select a specific task for any dataset by using the `task` option.
 
 ```lua
-mnist = dbc.load{name='mnist', task='classification'}
+>>> mnist = dbc.load{name='mnist', task='classification'}
 ```
 
 This API lets you download+extract most dataset's data directly from its source to the disk. For that, simply use the `download()` method:
 
 ```lua
-dbc.download{name='cifar10', data_dir='home/some/dir'}
+>>> dbc.download{name='cifar10', data_dir='home/some/dir'}
 ```
 
 ### Data fetching
@@ -75,18 +77,18 @@ Once a dataset has been loaded, in order to retrieve data you can either use Tor
 For example, to retrieve an image and its label from the `MNIST` dataset using the Torch7's `HDF5` API you can do the following:
 
 ```lua
-images_ptr = mnist.file:read('default/train/images')
-img = images_tr:partial({1,1}, {1,32}, {1,32}, {1,3})
+>>> images_ptr = mnist.file:read('default/train/images')
+>>> img = images_tr:partial({1,1}, {1,32}, {1,32}, {1,3})
 
-labels_ptr = mnist.file:read('default/train/labels')
-label = labels_ptr:partial({1,1})
+>>> labels_ptr = mnist.file:read('default/train/labels')
+>>> label = labels_ptr:partial({1,1})
 ```
 
 or you can use the API provided by this package:
 
 ```lua
-img = mnist:get('train', 'images', 1)
-label = mnist:get('train', 'labels', 1)
+>>> img = mnist:get('train', 'images', 1)
+>>> label = mnist:get('train', 'labels', 1)
 ```
 
 
