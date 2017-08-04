@@ -2,6 +2,7 @@
     dbcollection wrapper for Lua/Torch7.
 --]]
 
+require 'torch'
 
 local dbcollection = require 'dbcollection.env'
 local doc = require 'argcheck.doc'
