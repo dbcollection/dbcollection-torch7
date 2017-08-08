@@ -22,8 +22,21 @@ function setUp()
     local name = 'mnist'
     local task = 'classification'
 
-    local data_dir = paths.concat(home_dir, 'dbcollection', 'mnist', 'data')
-    local cache_path = paths.concat(home_dir, 'dbcollection', 'mnist', 'classification.h5')
+    local data_dir = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'data')
+    local cache_path = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'classification.h5')
+
+    if not paths.filep(cache_path) then
+        local db = dbc.load({name=name, task=task, is_test=true})
+
+        ----------------------------------------
+        -- temporary fix.
+        -- To be removed when the new dbcollection
+        -- Python module version is uploaded to pip.
+        if not paths.filep(cache_path) then
+            cache_path = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'detection.h5')
+        end
+        ----------------------------------------
+    end
 
     -- initialize object
     local loader = dbc.DatasetLoader(name, task, data_dir, cache_path)

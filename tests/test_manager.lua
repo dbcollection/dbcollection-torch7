@@ -43,6 +43,7 @@ end
 
 function test.test_load()
     local info = fetch_minst_info()
+    info.is_test = true
     local db = dbc.load(info)
     tester:eq(db.name, info.name)
     tester:eq(db.task, info.task)
