@@ -5,6 +5,8 @@
 # https://github.com/pandas-dev/pandas/blob/master/ci/install_travis.sh
 # https://github.com/pandas-dev/pandas/blob/master/.travis.yml
 
+PYVERSION='3.5'
+TRAVIS_PYTHON_VERSION=PYVERSION
 
 echo
 echo "[install_travis]"
