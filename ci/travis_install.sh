@@ -5,9 +5,6 @@
 # https://github.com/pandas-dev/pandas/blob/master/ci/install_travis.sh
 # https://github.com/pandas-dev/pandas/blob/master/.travis.yml
 
-PYVERSION='3.5'
-TRAVIS_PYTHON_VERSION=PYVERSION
-
 echo
 echo "[install_travis]"
 
@@ -78,15 +75,10 @@ echo
 echo "[create env]"
 
 # create our environment
-if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
-    PYTHON_VERSION=$PYVERSION
-else
-    PYTHON_VERSION=$TRAVIS_PYTHON_VERSION
-fi
 echo "set up a conda environment with the right Python version: $PYTHON_VERSION"
 REQ="ci/requirements.txt"
 echo "installing requirements from $REQ"
-time conda create -n dbcollection python=$PYTHON_VERSION --file=${REQ} || exit 1
+time conda create -n dbcollection python=3.5 --file=${REQ} || exit 1
 
 source activate dbcollection
 
