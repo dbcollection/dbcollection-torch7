@@ -88,9 +88,6 @@ time conda create -n dbcollection python=$PYTHON_VERSION --file=${REQ} || exit 1
 
 source activate dbcollection
 
-time conda install pytest pytest-cov
-time pip install pytest-xdist
-
 # we have additional pip installs
 echo
 echo "[additional pip installs]"
@@ -100,12 +97,17 @@ if [ -e ${REQ} ]; then
 fi
 
 echo
+
+echo
+echo "[clone repo]"
+git clone https://github.com/dbcollection/dbcollection
+
+echo
 if [ -z "$BUILD_TEST" ]; then
 
     # build but don't install
     echo "[build em]"
-    time python setup.py build_ext --inplace || exit 1
-
+    time cd dbcollection && python setup.py build_ext --inplace || exit 1
 fi
 
 echo
@@ -114,13 +116,13 @@ echo ${TRAVIS_TAG}
 if [ "${TRAVIS_BRANCH}" == "master" ] && [ "${TRAVIS_TAG}" != "" ]; then
     # install building dependencies
     echo "[install building dependencies]"
-    conda install conda-build anaconda-client wheel six pytest
+    conda install conda-build anaconda-client wheel six
 fi
 
 
 echo
 echo "[build/install source code]"
-time python setup.py install || exit 1
+time cd dbcollection && python setup.py install || exit 1
 
 
 echo
