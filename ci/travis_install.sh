@@ -97,11 +97,6 @@ if [ -e ${REQ} ]; then
 fi
 
 echo
-echo "[build/install dbcollection]"
-time conda install -c farrajota dbcollection || exit 1
-
-
-echo
 echo "[show dbcollection]"
 conda list -n dbcollection
 
