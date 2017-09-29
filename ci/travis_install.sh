@@ -97,32 +97,8 @@ if [ -e ${REQ} ]; then
 fi
 
 echo
-
-echo
-echo "[clone repo]"
-git clone https://github.com/dbcollection/dbcollection
-
-echo
-if [ -z "$BUILD_TEST" ]; then
-
-    # build but don't install
-    echo "[build em]"
-    time cd dbcollection && python setup.py build_ext --inplace || exit 1
-fi
-
-echo
-echo ${TRAVIS_BRANCH}
-echo ${TRAVIS_TAG}
-if [ "${TRAVIS_BRANCH}" == "master" ] && [ "${TRAVIS_TAG}" != "" ]; then
-    # install building dependencies
-    echo "[install building dependencies]"
-    conda install conda-build anaconda-client wheel six
-fi
-
-
-echo
-echo "[build/install source code]"
-time cd dbcollection && python setup.py install || exit 1
+echo "[build/install dbcollection]"
+time conda install -c farrajota dbcollection || exit 1
 
 
 echo
