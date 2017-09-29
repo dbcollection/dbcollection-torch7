@@ -21,5 +21,5 @@ install:
 
 script:
   - echo "test dbcollection"
-  - python -c "import dbcollection as dbc; mnist=dbc.load('mnist'); print(mnist)"
+  - python -c "import dbcollection as dbc; mnist=dbc.load('cifar10'); print(mnist)"
   - echo "test done"
