@@ -1,5 +1,5 @@
 sudo: false
-language: c
+language: python, c
 dist: trusty
 python: 3.5
 
