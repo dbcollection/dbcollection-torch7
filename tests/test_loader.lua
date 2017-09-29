@@ -19,7 +19,7 @@ local test = torch.TestSuite()
 
 function setUp()
     local home_dir = paths.home
-    local name = 'mnist'
+    local name = 'cifar10'
     local task = 'classification'
 
     local data_dir = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'data')

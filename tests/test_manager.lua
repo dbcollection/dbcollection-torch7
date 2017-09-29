@@ -19,7 +19,7 @@ local test = torch.TestSuite()
 
 function fetch_minst_info()
     return {
-        name = 'mnist',
+        name = 'cifar10',
         task = 'classification',
         data_dir = paths.concat(paths.home, 'tmp', 'download_data'),
         verbose = false,
