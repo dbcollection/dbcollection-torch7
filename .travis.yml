@@ -9,10 +9,6 @@ compiler:
   - gcc
   - clang
 
-cache:
-  directories:
-  - $HOME/OpenBlasInstall
-
 env:
   - TORCH_LUA_VERSION=LUAJIT21
 
