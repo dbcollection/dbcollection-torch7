@@ -1,5 +1,7 @@
 sudo: false
-language: c
+language: c, python
+python: 3.5
+dist: trusty
 os:
   - linux
 
@@ -44,6 +46,22 @@ addons:
     - libhdf5-serial-dev
     - hdf5-tools
 
+before_install:
+    - echo "before_install (Download miniconda)"
+    - export PATH="$HOME/miniconda3/bin:$PATH"
+    - df -h
+    - pwd
+    - uname -a
+    - git --version
+    - git tag
+
+install:
+    - echo "install dbcollection"
+    - chmod +x ci/travis_install.sh
+    - ci/travis_install.sh
+    - echo "install done"
+    - source activate dbcollection
+
 before_script:
   - echo "install torch"
   - export ROOT_TRAVIS_DIR=$(pwd)
@@ -59,11 +77,6 @@ before_script:
   - export LD_LIBRARY_PATH=${INSTALL_PREFIX}/lib:$LD_LIBRARY_PATH
   - ${INSTALL_PREFIX}/bin/luarocks install torch
   - ${INSTALL_PREFIX}/bin/luarocks install hdf5
-
-install:
-  - echo "install dbcollection"
-  - pip install dbcollection
-  - echo "package installed"
 
 script:
   - echo "install dbcollection-torch7"
