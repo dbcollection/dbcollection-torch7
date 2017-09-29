@@ -1,13 +1,23 @@
 sudo: false
 language: python
 dist: trusty
-python:
-    - 3.5
+python: 3.5
+
+before_install:
+    - echo "before_install (Download miniconda)"
+    - export PATH="$HOME/miniconda3/bin:$PATH"
+    - df -h
+    - pwd
+    - uname -a
+    - git --version
+    - git tag
 
 install:
     - echo "install dbcollection"
-    - pip install dbcollection
+    - chmod +x ci/travis_install.sh
+    - ci/travis_install.sh
     - echo "install done"
+    - source activate dbcollection
 
 script:
   - echo "test dbcollection"
