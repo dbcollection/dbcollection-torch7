@@ -53,11 +53,8 @@ before_install:
 
 install:
     - echo "install dbcollection"
-    - chmod +x ci/travis_install.sh
-    - ci/travis_install.sh
+    - pip install dbcollection
     - echo "install done"
-    - source activate dbcollection
-    - git clone --recursive https://github.com/dbcollection/dbcollection && cd dbcollection && python setup.py install
 
 before_script:
   - echo "install torch"
