@@ -6,104 +6,82 @@
 
 
 -- initializations
-local dbc = require 'dbcollection'
+require 'paths'
+local dbc = require 'dbcollection.env'
 
-local mytest = torch.TestSuite()
-local tester = torch.Tester()
-local precision = 1e-6
-torch.manualSeed(4)
-
-
-local data_dir = paths.concat(os.getenv('HOME'),'tmp','download_data', 'cifar10')
+local tester
+local test = torch.TestSuite()
 
 
 ------------
 -- Tests
 ------------
 
-function mytest._setUp()
-    dbc.config_cache({delete_cache=true, is_test=true})
+function fetch_minst_info()
+    return {
+        name = 'cifar10',
+        task = 'classification',
+        data_dir = paths.concat(paths.home, 'tmp', 'download_data'),
+        verbose = false,
+        is_test = true,
+    }
 end
 
-function mytest._tearDown()
-    dbc.config_cache({delete_cache=true, is_test=true})
+function test.test_download()
+    local info = fetch_minst_info()
+    info.extract_data = true
+    info.verbose = true
+    info.task = nil
+    dbc.download(info)
 end
 
-function mytest.test_load__invalid_inputs()
-    --tester:assert(false)
+function test.test_process()
+    local info = fetch_minst_info()
+    info.data_dir = nil
+    dbc.process(info)
 end
 
-function mytest.test_load__succeed()
-    dbc.load({name='cifar10', data_dir=data_dir, is_test=true})
+function test.test_load()
+    local info = fetch_minst_info()
+    info.is_test = true
+    local db = dbc.load(info)
+    tester:eq(db.name, info.name)
+    tester:eq(db.task, info.task)
+    tester:eq(db.data_dir, paths.concat(info.data_dir, info.name))
 end
 
-
-function mytest.test_download__invalid_inputs()
-    --tester:assert(false)
+function test.test_add()
+    dbc.add({name='new_db', task='new_task', data_dir='new/path/db', file_path='newdb.h5', keywords={'new_category'}, is_test=true})
 end
 
-function mytest.test_download__succeed_cifar10()
-    dbc.download({name='cifar10', data_dir=data_dir, is_test=true})
+function test.test_add2()
+    dbc.add({name='new_db', task='new_task', data_dir='new/path/db', file_path='newdb.h5', keywords={'new_category'}, is_test=true})
+    dbc.add({name='new_db', task='new_task', data_dir='new/path/db', file_path='newdb.h5', keywords={'new_category'}, is_test=true})
 end
 
-
-function mytest.test_process__invalid_inputs()
-    --tester:assert(false)
+function test.test_remove()
+    dbc.add({name='new_db', task='new_task', data_dir='new/path/db', file_path='newdb.h5', keywords={'new_category'}, is_test=true})
+    dbc.remove({name='new_db', task='new_task', delete_data=true, is_test=true})
 end
 
-function mytest.test_process__succeed_cifar10()
-    dbc.download({name='cifar10', data_dir=data_dir, is_test=true})
-    dbc.process({name='cifar10', is_test=true})
+function test.test_config_cache()
+    dbc.config_cache({reset_cache=true, is_test=true})
 end
 
-
-function mytest.test_add__invalid_inputs()
-    --tester:assert(false)
+function test.test_query()
+    dbc.query('info', true)
 end
 
-function mytest.test_add__succeed()
-    dbc.add({name='test', task='task1', data_dir='data/dir', file_path='path/file.h5', is_test=true})
+function test_info()
+    dbc.info({is_test=True})
 end
 
-
-function mytest.test_remove__invalid_inputs()
-    --tester:assert(false)
-end
-
-function mytest.test_remove__invalid_dataset()
-    --tester:assert(false)
-end
-
-function mytest.test_remove__succeed()
-    dbc.add({name='test', task='task1', data_dir='data/dir', file_path='path/file.h5', is_test=true})
-    dbc.remove({name='test', delete_data=true, is_test=true})
-end
-
-
-function mytest.test_config_cache__change_default_dir()
-    dbc.config_cache({field='default_cache_dir', value='new/cache/path', is_test=true})
-end
-
-function mytest.test_config_cache__delete_cache()
-    dbc.config_cache({delete_cache=true, is_test=true})
-end
-
-function mytest.test_config_cache__delete_data()
-    dbc.config_cache({clear_cache=true, delete_cache=true, is_test=true})
+function test.test_info_list_datasets()
+    dbc.info({name='all', is_test=true})
 end
 
 
-function mytest.test_query()
-    dbc.query({is_test=true})
+return function(_tester_)
+   tester = _tester_
+   return test
 end
-
-function mytest.test_info()
-    dbc.info({is_test=true})
-end
-
-------------------
--- Run Test Suite
-------------------
-
-tester:add(mytest)
-tester:run()
