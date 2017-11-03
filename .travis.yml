@@ -6,6 +6,12 @@ python: 3.6
 os:
   - linux
 
+cache:
+  - ccache
+  - directories:
+    - $HOME/.ccache
+    - $HOME/OpenBlasInstall
+
 compiler:
   - gcc
   - clang
@@ -43,16 +49,9 @@ addons:
     - libhdf5-serial-dev
     - hdf5-tools
 
-before_install:
-    - echo "before_install (Download miniconda)"
-    - export PATH="$HOME/miniconda3/bin:$PATH"
-    - df -h
-    - pwd
-    - uname -a
-    - git --version
-    - git tag
-
 install:
+    - pip install --upgrade pip
+    - pip --version
     - echo "install dbcollection"
     - pip install dbcollection
     - echo "install done"
