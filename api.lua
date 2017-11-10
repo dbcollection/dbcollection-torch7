@@ -96,6 +96,12 @@ local function fetch_default_task_name(name)
     return os.capture(string.format('python -c "%s"', cmd))
 end
 
+--[[ Get all datasets into a table ]]
+function fetch_list_datasets()
+    local db_list = {}
+    return db_list
+end
+
 -----------------------------------------------------------
 -- API functions
 -----------------------------------------------------------
@@ -556,7 +562,90 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.info(...)
+function dbcollection.info_cache(...)
+    local initcheck = argcheck{
+        pack=true,
+        doc=[[
+            Prints the cache contents and other information.
+
+            This method provides a dual functionality: (1) It displays
+            the cache file content that shows which datasets are
+            available for loading right now; (2) It can display all
+            available datasets to use in the dbcollection package, and
+            if a name is provided, it displays what tasks it contains
+            for loading.
+
+            The default is to display the cache file contents to the
+            screen. To list the available datasets, set the 'name'
+            input argument to 'all'. To list the tasks of a specific
+            dataset, set the 'name' input argument to the name of the
+            desired dataset (e.g., 'cifar10').
+
+            Parameters
+            ----------
+            name : str
+                Name of the dataset to display information.
+                (optional, default='None')
+            paths_info : bool
+                Print the paths info to screen.
+                (optional, default=true)
+            datasets_info : bool/str
+                Print the datasets info to screen.
+                If a string is provided, it selects
+                only the information of that string
+                (dataset name).
+                (optional, default=true)
+            categories_info : bool/str
+                Print the paths info to screen.
+                If a string is provided, it selects
+                only the information of that string
+                (dataset name).
+                (optional, default=true)
+            is_test : bool
+                Flag used for tests.
+                (optional, default=false)
+
+        ]],
+        {name="name", type="string", default='None',
+         help="Name of the dataset to display information.",
+         opt = true},
+        {name="paths_info", type="string", default='true',
+         help=" Print the paths info to screen.",
+         opt = true},
+        {name="datasets_info", type="string", default='true',
+         help="Print the datasets info to screen." ..
+                "If a string is provided, it selects" ..
+                "only the information of that string" ..
+                "(dataset name).",
+         opt = true},
+        {name="categories_info", type="string", default='true',
+         help="Print the paths info to screen. " ..
+                "If a string is provided, it selects" ..
+                "only the information of that string" ..
+                "(dataset name).",
+         opt = true},
+        {name="is_test", type="boolean", default=false,
+         help="Flag used for tests.",
+         opt = true},
+    }
+
+    -- parse options
+    local args = initcheck(...)
+
+    local command = ('import dbcollection as dbc;' ..
+                     'dbc.info(name=%s, paths_info=%s, datasets_info=%s, categories_info=%s, is_test=%s)')
+                     :format(tostring_none(args.name),
+                             tostring_py2(args.paths_info),
+                             tostring_py2(args.datasets_info),
+                             tostring_py2(args.categories_info),
+                             tostring_py(args.is_test))
+
+    os.execute(('python -c "%s"'):format(command))
+end
+
+------------------------------------------------------------------------------------------------------------
+
+function dbcollection.info_datasets(...)
     local initcheck = argcheck{
         pack=true,
         doc=[[

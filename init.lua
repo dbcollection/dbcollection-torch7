@@ -20,7 +20,8 @@ Internally it uses the Python's dbcollection module for data
 download/process/management.
 ]]
 
-require 'dbcollection.manager'
+require 'dbcollection.api'
+require 'dbcollection.loader'
 require 'dbcollection.utils'
 require 'dbcollection.tests.test'
 
