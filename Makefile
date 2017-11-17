@@ -1,5 +1,5 @@
 install:
-	luarocks install rocks/*
+	luarocks make rocks/*
 
 uninstall:
 	luarocks remove dbcollection
