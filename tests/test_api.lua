@@ -95,6 +95,16 @@ function test.test_add()
              is_test=true})
 end
 
+function test.test_add2()
+    for i=1, 2 do
+        dbc.add({name='new_db',
+                 task='new_task',
+                 data_dir='new/path/db',
+                 file_path='newdb.h5',
+                 keywords={'new_category'}, is_test=true})
+    end
+end
+
 
 --------------------------------------------------------------------------------
 -- Output

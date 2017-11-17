@@ -398,9 +398,9 @@ function dbcollection.add(...)
         local str = ''
         for i=1, #args.keywords do
             str = str .. tostring(args.keywords[i])
-            if i<=#args.keywords then str = str .. ',' end
+            if i<#args.keywords then str = str .. ',' end
         end
-        args.keywords = ('[%s]'):format(str)
+        args.keywords = ("['%s']"):format(str)
     else
         args.keywords = '[]'
     end
