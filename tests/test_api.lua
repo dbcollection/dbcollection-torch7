@@ -119,7 +119,31 @@ function test.test_query()
     dbc.query('info', true)
 end
 
---------------------------------------------------------------------------
+function test.test_info_cache__empty()
+    dbc.info_cache({is_test=true})
+end
+
+function test.test_info_cache__some_fields()
+    dbc.add({name='new_db',
+            task='new_task',
+            data_dir='new/path/db',
+            file_path='newdb.h5',
+            keywords={'new_category'},
+            is_test=true})
+    dbc.info_cache({name='new_db', paths_info=false, datasets_info=true, categories_info=true, is_test=true})
+end
+
+function test.test_info_cache__no_fields()
+    dbc.add({name='new_db',
+            task='new_task',
+            data_dir='new/path/db',
+            file_path='newdb.h5',
+            keywords={'new_category'},
+            is_test=true})
+    dbc.info_cache({name='new_db', paths_info=false, datasets_info=false, categories_info=false, is_test=true})
+end
+
+--------------------------------------------------------------------------------
 -- Output
 --------------------------------------------------------------------------------
 
