@@ -72,6 +72,7 @@ function test.test_download_cifar10()
 end
 
 function test.test_process_mnist()
+    test.test_download_mnist()
     local info = fetch_minst_info()
     info.data_dir = nil
     dbc.process(info)
@@ -114,8 +115,11 @@ function test.test_config_cache()
     dbc.config_cache({reset_cache=true, is_test=true})
 end
 
+function test.test_query()
+    dbc.query('info', true)
+end
 
---------------------------------------------------------------------------------
+--------------------------------------------------------------------------
 -- Output
 --------------------------------------------------------------------------------
 
