@@ -77,6 +77,23 @@ function test.test_process_mnist()
     dbc.process(info)
 end
 
+--function test.test_load_mnist()
+--    local info = fetch_minst_info()
+--    info.is_test = true
+--    local db = dbc.load(info)
+--    tester:eq(db.db_name, info.name)
+--    tester:eq(db.task, info.task)
+--    tester:eq(db.data_dir, paths.concat(info.data_dir, info.name))
+--end
+
+function test.test_add()
+    dbc.add({name='new_db',
+             task='new_task',
+             data_dir='new/path/db',
+             file_path='newdb.h5',
+             keywords={'new_category'},
+             is_test=true})
+end
 
 
 --------------------------------------------------------------------------------
