@@ -64,12 +64,20 @@ function test.test_download_mnist()
 end
 
 function test.test_download_cifar10()
-    local info = fetch_minst_info()
+    local info = fetch_minst_info('cifar10')
     info.extract_data = true
     info.verbose = true
     info.task = nil
     dbc.download(info)
 end
+
+function test.test_process_mnist()
+    local info = fetch_minst_info()
+    info.data_dir = nil
+    dbc.process(info)
+end
+
+
 
 --------------------------------------------------------------------------------
 -- Output
