@@ -1,5 +1,5 @@
 --[[
-    Dataset loader class.
+    Dataset's metadata loader classes.
 --]]
 
 local hdf5 = require 'hdf5'
@@ -7,12 +7,17 @@ local dbcollection = require 'dbcollection.env'
 local string_ascii = require 'dbcollection.utils.string_ascii'
 
 local DataLoader = torch.class('dbcollection.DatasetLoader', dbcollection)
+local SetLoader = torch.class('dbcollection.SetLoader', dbcollection)
+local FieldLoader = torch.class('dbcollection.FieldLoader', dbcollection)
 
-------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------
 
-function DataLoader:__init(name, task, data_dir, cache_path)
+function DataLoader:__init(name, task, data_dir, hdf5_filepath)
 --[[
-    dbcollection's data loading API class.
+    Dataset metadata loader class.
+
+    This class contains several methods to fetch data from a hdf5 file
+    by using simple, easy to use functions for (meta)data handling.
 
     Parameters
     ----------
@@ -22,24 +27,46 @@ function DataLoader:__init(name, task, data_dir, cache_path)
         Name of the task.
     data_dir : str
         Path of the dataset's data directory on disk.
-    cache_path : str
+    hdf5_filepath : str
         Path of the metadata cache file stored on disk.
 
+    Attributes
+    ----------
+    db_name : str
+        Name of the dataset.
+    task : str
+        Name of the task.
+    data_dir : str
+        Path of the dataset's data directory on disk.
+    hdf5_filepath : str
+        Path of the hdf5 metadata file stored on disk.
+    hdf5_file : h5py._hl.files.File
+        hdf5 file object handler.
+    root_path : str
+        Default data group of the hdf5 file.
+    sets : tuple
+        List of names of set splits (e.g. train, test, val, etc.)
+    object_fields : dict
+        Data field names for each set split.
 ]]
     assert(name, ('Must input a valid dataset name: %s'):format(name))
     assert(task, ('Must input a valid task name: %s'):format(task))
     assert(data_dir, ('Must input a valid path for the data directory: %s'):format(data_dir))
-    assert(cache_path, ('Must input a valid path for the cache file: %s'):format(cache_path))
+    assert(hdf5_filepath, ('Must input a valid path for the cache file: %s'):format(cache_path))
 
     -- store information of the dataset
-    self.name = name
+    self.db_name = name
     self.task = task
     self.data_dir = data_dir
-    self.cache_path = cache_path
+    self.hdf5_filepath = hdf5_filepath
 
     -- create a handler for the cache file
-    self.file = hdf5.open(self.cache_path, 'r')
-    self.root_path = '/default'
+    self.file = hdf5.open(self.hdf5_filepath, 'r')
+    self.root_path = '/'
+
+    -- make links for all groups (train/val/test/etc) for easier access
+    self.sets = {}
+    self.object_fields = {}
 
     -- make links for all groups (train/val/test/etc) for easier access
     self.sets = {}
@@ -49,6 +76,8 @@ function DataLoader:__init(name, task, data_dir, cache_path)
         -- add set to the table
         table.insert(self.sets, k)
 
+        self['k'] = dbcollection.SetLoader(self.file:read(self.root_path + k), k)
+
         -- fetch list of field names that compose the object list.
         local data = self.file:read(('%s/%s/object_fields'):format(self.root_path, k)):all()
         if data:dim()==1 then data = data:view(1,-1) end
@@ -56,386 +85,590 @@ function DataLoader:__init(name, task, data_dir, cache_path)
     end
 end
 
-------------------------------------------------------------------------------------------------------------
 
-local function assert_value(idx, range_ini, range_end)
-    assert(idx)
-    assert(range_ini)
-    assert(range_end)
-    assert(idx>=range_ini and idx<=range_end, string.format('Invalid index value: %d. Valid range: (%d, %d);',
-                                                            idx, range_ini, range_end))
-end
 
-function DataLoader:get(set_name, field_name, idx)
+function DataLoader:get(set_name, field, idx)
 --[[
-    Retrieve data from the dataset's hdf5 metadata file.
+    Retrieves data from the dataset's hdf5 metadata file.
 
-    Retrieve the i'th data from the field 'field_name'.
+    This method retrieves the i'th data from the hdf5 file with the
+    same 'field' name. Also, it is possible to retrieve multiple values
+    by inserting a list/tuple of number values as indexes.
 
     Parameters
     ----------
-    set_name : string
+    set_name : str
         Name of the set.
-    field_name : string
-        Name of the data field.
-	idx : number/table, optional
-        Index number of the field. If the input is a table, it uses it as a range
-        of indexes and returns the data for that range.
+    field : str
+        Field name.
+    idx : int/list/tuple, optional
+        Index number of the field. If it is a list, returns the data
+        for all the value indexes of that list.
 
     Returns
     -------
-    torch.Tensor
-        Value/list of a field from the metadata cache file.
-
+    np.ndarray
+        Numpy array containing the field's data.
+    list
+        List of numpy arrays if using a list of indexes.
 ]]
-    assert(set_name, 'Must input a valid set name')
-    assert(field_name, 'Must input a valid field name')
-
-    local field_path = ('%s/%s/%s'):format(self.root_path, set_name, field_name)
-    local data = self.file:read(field_path)
-    local out
-    if idx then
-        local size = data:dataspaceSize()
-
-        if type(idx) == 'number' then
-            assert_value(idx, 1, size[1])
-            idx = {idx, idx}
-        elseif type(idx) == 'table' then
-            assert(next(idx), 'Invalid range. Cannot input an empty table. Valid inputs: nil, {idx} or {idx_ini, idx_end}.')
-            assert(#idx>=1 and #idx<=2, 'Invalid range. Must have at most two entries. Valid inputs: nil, {idx} or {idx_ini, idx_end}.')
-            if #idx == 1 then
-                assert_value(idx[1], 1, size[1])
-                idx[2]=idx[1]
-            else
-                assert_value(idx[1], 1, size[1])
-                assert_value(idx[2], 1, size[1])
-                assert(idx[2] >= idx[1], 'Invalid range. The first index must be lower or equal to the second one. ' ..
-                                         'Valid inputs: nil, {idx} or {idx_ini, idx_end}.')
-            end
-        else
-            error('Invalid index type: %s. Must be either a \'number\' or a \'table\'.')
-        end
-
-        local ranges = {idx}
-        for i=2, #size do
-            table.insert(ranges, {1, size[i]})
-        end
-        out = data:partial(unpack(ranges))
-    else
-        out = data:all()
-    end
-
-    -- check if the field is 'object_ids'.
-    -- If so, add one in order to get the right idx (python uses 0-index)
-    if field_name == 'object_ids' then
-        return out:add(1)
-    else
-        return out
-    end
+    assert(set_name, ('Must input a valid set name: %s'):format(set_name))
+    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                :format(set_name))
+    assert(field, ('Must input a valid field name: %s'):format(field))
+    return self[set_name]:get(field, idx)
 end
 
-------------------------------------------------------------------------------------------------------------
-
-function DataLoader:object(set_name, idx, is_value)
+function DataLoader:object(set_name, idx, convert_to_value)
 --[[
     Retrieves a list of all fields' indexes/values of an object composition.
 
     Retrieves the data's ids or contents of all fields of an object.
 
-    It works by calling :get() for each field individually and grouping
-    them into a list.
+    It basically works as calling the get() method for each individual field
+    and then groups all values into a list w.r.t. the corresponding order of
+    the fields.
 
     Parameters
     ----------
     set_name : str
         Name of the set.
-    idx : int, long, list
+    idx : int/list/tuple, optional
         Index number of the field. If it is a list, returns the data
-        for all the value indexes of that list
-    is_value : bool, optional
-       Outputs a tensor of indexes (if false)
-       or a table of tensors/values (if true).
+        for all the value indexes of that list. If no index is used,
+        it returns the entire data field array.
+    convert_to_value : bool, optional
+        If False, outputs a list of indexes. If True,
+        it outputs a list of arrays/values instead of indexes.
 
-    Returns:
-    --------
-    table
-        Returns a table of indexes (or values, i.e. tensors, if is_value=True).
-
+    Returns
+    -------
+    list
+        Returns a list of indexes or, if convert_to_value is True,
+        a list of data arrays/values.
 ]]
-    assert(set_name, 'Must input a valid set name')
-    local is_value = is_value or false
-
-    local set_path = ('%s/%s/'):format(self.root_path,set_name)
-
-    local indexes = self:get(set_name, 'object_ids', idx)
-
-    if is_value then
-        local out = {}
-        for i=1, indexes:size(1) do
-            local data = {}
-            for k, field in ipairs(self.object_fields[set_name]) do
-                if indexes[i][k] > 0 then
-                    table.insert(data, self:get(set_name, field, indexes[i][k]))
-                else
-                    table.insert(data, {})
-                end
-            end
-            table.insert(out, data)
-        end
-        if #out > 1 then
-            return out
-        else
-            return out[1]
-        end
-    else
-        return indexes
-    end
+    assert(set_name, ('Must input a valid set name: %s'):format(set_name))
+    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                :format(set_name))
+    return self[set_name]:object(idx, convert_to_value or false)
 end
 
-------------------------------------------------------------------------------------------------------------
-
-function DataLoader:size(set_name, field_name)
+function DataLoader:size(set_name, field)
 --[[
     Size of a field.
 
-    Returns the number of the elements of a field_name.
+    Returns the number of the elements of a field.
 
     Parameters
     ----------
-    set_name : str
+    set_name : str, optional
         Name of the set.
-    field_name : str, optional
-        Name of the data field.
+    field : str, optional
+        Name of the field in the metadata file.
 
-    Returns:
-    --------
-    table
-        Returns the the size of the object list.
-
+    Returns
+    -------
+    list
+        Returns the size of a field.
 ]]
-    assert(set_name, ('Must input a valid set name: %s'):format(set_name))
-
-    local field_name = field_name or 'object_ids'
-    local field_path = ('%s/%s/%s'):format(self.root_path, set_name, field_name)
-    local data = self.file:read(field_path)
-    return data:dataspaceSize()
+    local field = field or 'object_ids'
+    if set_name then
+        assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                    :format(set_name))
+        return self[set_name]:size(field)
+    else
+        local out = {}
+        for set_name in pairs(self.sets) do
+            out[set_name] = self[set_name]:size(field)
+        end
+        return out
+    end
 end
-
-------------------------------------------------------------------------------------------------------------
 
 function DataLoader:list(set_name)
 --[[
-    Lists all fields' names.
+    List of all field names of a set.
 
     Parameters
     ----------
-    set_name : str
+    set_name : str, optional
         Name of the set.
 
     Returns
     -------
-    table
-        List of all data fields names of the dataset.
-
+    list
+        List of all data fields of the dataset.
 ]]
-    assert(set_name, ('Must input a valid set name: %s'):format(set_name))
-
-    local set_path = ('%s/%s'):format(self.root_path, set_name)
-    local data = self.file:read(set_path)
-    local list_fields = {}
-    for k, _ in pairs(data._children) do
-        table.insert(list_fields, k)
+    if set_name then
+        assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                    :format(set_name))
+        return self[set_name]:list()
+    else
+        local out = {}
+        for set_name in pairs(self.sets) do
+            out[set_name] = self[set_name]:list()
+        end
+        return out
     end
-    return list_fields
 end
 
-------------------------------------------------------------------------------------------------------------
-
-function DataLoader:object_field_id(set_name, field_name)
+function DataLoader:object_field_id(set_name, field)
 --[[
     Retrieves the index position of a field in the 'object_ids' list.
 
+    This method returns the position of a field in the 'object_ids' object.
+    If the field is not contained in this object, it returns a null value.
+
     Parameters
     ----------
     set_name : str
         Name of the set.
-    field_name : str
-        Name of the data field.
+    field : str
+        Name of the field in the metadata file.
 
     Returns
     -------
-    number
-        Index of the field_name on the list.
-
-    Raises
-    ------
-    error
-        If field_name does not exist on the 'object_fields' list.
+    int
+        Index of the field in the 'object_ids' list.
 ]]
     assert(set_name, ('Must input a valid set name: %s'):format(set_name))
-    assert(field_name, ('Must input a valid field_name name: %s'):format(field_name))
+    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                :format(set_name))
+    assert(field, ('Must input a valid field name: %s'):format(field))
+    return self[set_name]:object_field_id(field)
+end
 
-    for k, field in pairs(self.object_fields[set_name]) do
-        if string.match(field_name, field) then
-            return k
+function DataLoader:info(set_name)
+--[[
+    Prints information about all data fields of a set.
+
+    Displays information of all fields of a set group inside the hdf5
+    metadata file. This information contains the name of the field, as well
+    as the size/shape of the data, the data type and if the field is
+    contained in the 'object_ids' list.
+
+    If no 'set_name' is provided, it displays information for all available
+    sets.
+
+    This method only shows the most useful information about a set/fields
+    internals, which should be enough for most users in helping to
+    determine how to use/handle a specific dataset with little effort.
+
+    Parameters
+    ----------
+    set_name : str, optional
+        Name of the set.
+]]
+    if set_name then
+        assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                    :format(set_name))
+        self[set_name]:info()
+    else
+        for set_name in pairs(self.sets) do
+            self[set_name]:info()
         end
     end
-    error(('Field name \'%s\' does not exist.'):format(field_name))
 end
 
-------------------------------------------------------------------------------------------------------------
+function DataLoader:__tostring()
+    return ("Dataloader: %s (%s task)"):format(self.db_name, self.task)
+end
 
---[[ Get the maximum length of all elements (strings only). ]]
-local function get_max_size(tableA, key)
-    local max = 0
-    for k=1, #tableA do
-        max = math.max(max, #tableA[k][key])
+---------------------------------------------------------------------------------------------------
+
+function SetLoader:__init(hdf5_group, set_name)
+--[[
+    Set metadata loader class.
+
+    This class contains several methods to fetch data from a specific
+    set (group) in a hdf5 file. It contains useful information about a
+    specific group and also several methods to fetch data.
+
+    Parameters
+    ----------
+    hdf5_group : h5py._hl.group.Group
+        hdf5 group object handler.
+    set_name : str
+        Name of the set.
+
+    Attributes
+    ----------
+    data : h5py._hl.group.Group
+        hdf5 group object handler.
+    set : str
+        Name of the set.
+    fields : tuple
+        List of all field names of the set.
+    _object_fields : tuple
+        List of all field names of the set contained by the 'object_ids' list.
+    nelems : int
+        Number of rows in 'object_ids'.
+]]
+    assert(hdf5_group, 'Must input a valid hdf5 group.')
+    assert(set_name, 'Must input a valid hdf5 group.')
+    self.data = hdf5_group
+    self.set = set_name
+    self.fields = tuple(hdf5_group.keys())
+
+    self.fields = {}
+    for k, v in pairs(self.data._children) do
+        table.insert(self.fields, k)
     end
-    return max
+    table.sort(self.fields)
+    local object_fields_data = self.data:getOrCreateChild('object_fields'):all()
+    self._object_fields = string_ascii.convert_ascii_to_str(object_fields_data)
+    self.nelems = self.data:getOrCreateChild('object_fields'):dataspaceSize()[1]
+
+    local function fetch_id_in_list(val, list)
+        for i=1, #list do
+            if list[i] == val then
+                return i
+            end
+        end
+        return {}
+    end
+
+    -- add fields to the class
+    for field in pairs(self.fields) do
+        local obj_id = fetch_id_in_list(field, self._object_fields)
+        self[field] = FieldLoader(self.data:getOrCreateChild(field), obj_id)
+    end
 end
 
-local function string_pad(str, len, char)
-    if char == nil then char = ' ' end
-    return str .. string.rep(char, len - #str)
-end
-
-local function is_in_table(tableA, value)
-    assert(tableA)
-    assert(value)
-    for k, v in pairs(tableA) do
-        if v == value then
+local function val_in_table(val, t)
+    for k, v in pairs(t) do
+        if v == vall then
             return true
         end
     end
     return false
 end
 
+function SetLoader:get(field, idx)
+--[[
+    Retrieves data from the dataset's hdf5 metadata file.
 
---[[ Split the field names into two separate lists for display. ]]--
-function DataLoader:_get_fields_lists_info(set_name)
-    assert(set_name)
+    This method retrieves the i'th data from the hdf5 file with the
+    same 'field' name. Also, it is possible to retrieve multiple values
+    by inserting a list/tuple of number values as indexes.
 
-    -- get all field names
-    local field_names = self:list(set_name)
-    table.sort(field_names)  --sort the list alphabetically
+    Parameters
+    ----------
+    field : str
+        Field name.
+    idx : int/list/tuple, optional
+        Index number of the field. If it is a list, returns the data
+        for all the value indexes of that list.
 
-    -- split fields names into two tables
-    local fields_info, list_info = {}, {}
-    for k=1, #field_names do
-        local field_name = field_names[k]
-        local f = self.file:read(self.root_path .. '/' .. set_name .. '/' .. field_name)
-        local size = f:dataspaceSize()
-        local ranges = {1}
-        for i=2, #size do
-            table.insert(ranges, {1, size[i]})
-        end
-        local tensor = f:partial(unpack(ranges))
-        local s_shape = ''
-        for i=1, #size do
-            s_shape = s_shape .. tostring(size[i])
-            if i < #size then
-                s_shape = s_shape .. ', '
+    Returns
+    -------
+    np.ndarray
+        Tensor array containing the field's data.
+    Table
+        Table of tensors if using a list of indexes.
+]]
+    assert(field, ('Must input a valid field name: %s'):format(field))
+    assert(val_in_table(field, self.fields), ('Field \'%s\' does not exist in the \'%s\' set.')
+                                             :format(field, self.set))
+    return self[field]:get(idx)
+end
+
+function SetLoader:_convert(idx)
+--[[
+    Retrieve data from the dataset's hdf5 metadata file in the original format.
+
+    This method fetches all indices of an object(s), and then it looks up for the
+    value for each field in 'object_ids' for a certain index(es), and then it
+    groups the fetches data into a single list.
+
+    Parameters
+    ----------
+    idx : int/table
+        Index number of the field. If it is a list, returns the data
+        for all the indexes of that list as values.
+
+    Returns
+    -------
+    str/int/table
+        Value/list of a field from the metadata cache file.
+]]
+    local indexes = idx
+    if type(idx[1]) == 'number' then
+        indexes = {idx}
+    end
+
+    local output = {}
+    for i=1, #idx do
+        local data = {}
+        for k, field in ipairs(self.object_fields) do
+            if indexes[i][k] > 0 then
+                table.insert(data, self:get(field, indexes[i][k]))
+            else
+                table.insert(data, {})
             end
         end
-        s_shape = '{' .. s_shape .. '}'
-        local s_type = tensor:type()
-        if field_name:find('list_') then
-            table.insert(list_info, {name = field_name,
-                                     shape = 'shape = ' .. s_shape,
-                                     type = 'dtype = ' .. s_type})
+        table.insert(out, data)
+    end
+    if #output > 1 then
+        return output
+    else
+        return output[1]
+    end
+end
+
+function SetLoader:object(idx, convert_to_value)
+--[[
+    Retrieves a list of all fields' indexes/values of an object composition.
+
+    Retrieves the data's ids or contents of all fields of an object.
+
+    It basically works as calling the get() method for each individual field
+    and then groups all values into a list w.r.t. the corresponding order of
+    the fields.
+
+    Parameters
+    ----------
+    idx : int/list/tuple, optional
+        Index number of the field. If it is a list, returns the data
+        for all the value indexes of that list. If no index is used,
+        it returns the entire data field array.
+    convert_to_value : bool, optional
+        If False, outputs a list of indexes. If True,
+        it outputs a list of arrays/values instead of indexes.
+
+    Returns
+    -------
+    list
+        Returns a list of indexes or, if convert_to_value is True,
+        a list of data arrays/values.
+]]
+    if idx then
+        if type(idx) == 'number' then
+            assert(idx >= 1, ('idx must be >=1: %d'):format(idx))
+        elseif type(idx) == 'table' then
+            local min = 1
+            for k, v in pairs(idx) do
+                min = math.min(min, v)
+            end
+            assert(min==1, ('Table must have indexes >= 1.'))
+        else
+            error(('Must insert a table or number as input: %s':format(type(idx)))
+        end
+    end
+
+    local indexes = self:get('object_ids', idx)
+
+    if convert_to_value then
+        return self._convert(indexes)
+    else
+        return indexes
+    end
+end
+
+function SetLoader:size(field)
+--[[
+    Size of a field.
+
+    Returns the number of the elements of a field.
+
+    Parameters
+    ----------
+    field : str, optional
+        Name of the field in the metadata file.
+
+    Returns
+    -------
+    list
+        Returns the size of a field.
+]]
+    local field = field or 'object_ids'
+    assert(val_in_table(field, self._object_fields),
+           ('Field \'%s\' does not exist in the \'%s\' set.')
+           :format(field, self.set))
+    return self.data:getOrCreateChild(field):dataspaceSize()
+end
+
+function SetLoader:list()
+--[[
+    List of all field names.
+
+    Returns
+    -------
+    list
+        List of all data fields of the dataset.
+]]
+    return self.fields
+end
+
+function SetLoader:object_field_id(field)
+    assert(field, 'Must input a valid field.')
+    assert(val_in_table(field, self._object_fields),
+           ('Field \'%s\' does not exist \'object_fields\' set.')
+           :format(field, self.set))
+    local idx
+    for i=1, #self._object_fields do
+        if field == self._object_fields[i] then
+            return i
+        end
+    end
+    error('Field does not exist in \'_object_fields\'')
+end
+
+function SetLoader:info()
+--[[
+    Prints information about the data fields of a set.
+
+    Displays information of all fields available like field name,
+    size and shape of all sets. If a 'set_name' is provided, it
+    displays only the information for that specific set.
+
+    This method provides the necessary information about a data set
+    internals to help determine how to use/handle a specific field.
+]]
+    print(('\n> Set: {}'):format(self.set))
+
+    local fields_info = {}
+    local lists_info = {}
+    local maxsize_name = 0
+    local maxsize_shape = 0
+    local maxsize_name_lists = 0
+    local maxsize_shape_lists = 0
+    local maxsize_type = 0
+    for i=1, #self.fields do
+        local f = self:get(field)
+        local size = f:size():totable()
+        local shape="("
+        for j=1, #size do
+            shape = shape .. size[j]
+            if j < #size then
+                shape = shape .. ', '
+            else
+                shape = shape .. ')'
+            end
+        end
+        local dtype = torch.type(f)
+        if fields:match('list_') then
+            table.insert(lists_info, {
+                name = field,
+                shape = ('shape = %s'):format(shape),
+                type = ('dtype = %s'):format(dtype)
+            })
         else
             local s_obj = ''
-            if is_in_table(self.object_fields[set_name], field_name) then-- pcall(self:object_field_id, set_name, field_name) then
-                s_obj = ("(in 'object_ids', position = %d)"):format(self:object_field_id(set_name, field_name))
+            if val_in_table(field, self._object_fields) then
+                s_obj = ("(in 'object_ids', position = {})")
+                        :format(self.object_field_id(field))
             end
-            table.insert(fields_info, {name = field_name,
-                                       shape = 'shape = ' .. s_shape,
-                                       type = 'dtype = ' .. s_type,
-                                       obj = s_obj})
+            table.insert(fields_info, {
+                name = field,
+                shape = ('shape = %s'):format(shape),
+                type = ('dtype = %s'):format(dtype),
+                obj = s_obj
+            })
+            maxsize_name_lists = math.max(maxsize_name_lists, #field)
+            maxsize_shape_lists = math.max(maxsize_shape_lists, #dtype)
         end
-    end
-    return fields_info, list_info
-end
 
-
---[[ Prints information about the data fields of a set. ]]--
-function DataLoader:_print_info(set_name)
---[[
-    Prints information about the data fields of a set.
-
-    Displays information of all fields available like field name,
-    size and shape of all sets. If a 'set_name' is provided, it
-    displays only the information for that specific set.
-
-    This method provides the necessary information about a data set
-    internals to help determine how to use/handle a specific field.
-
-    Parameters
-    ----------
-    set_name : str
-        Name of the set.
-
-]]
-    assert(set_name)
-
-    -- get a list of field names and a list of list fields
-    local fields_info, list_info = self:_get_fields_lists_info(set_name)
-
-    print(('\n> Set: %s'):format(set_name))
-
-    -- prints all fields except list_*
-    local maxsize_name = get_max_size(fields_info, 'name') + 8
-    local maxsize_shape = get_max_size(fields_info, 'shape') + 3
-    local maxsize_type = get_max_size(fields_info, 'type') + 3
-    for k=1, #fields_info do
-        local s_name = string_pad('   - ' .. fields_info[k].name .. ',', maxsize_name, ' ')
-        local s_shape = string_pad(fields_info[k].shape .. ',', maxsize_shape, ' ')
-        local s_obj = fields_info[k].obj
-        local s_type
-        if #s_obj > 1 then
-            s_type = string_pad(fields_info[k].type .. ',', maxsize_type, ' ')
-        else
-            s_type = string_pad(fields_info[k].type, maxsize_type, ' ')
-        end
-        print(string.format('%s %s %s %s', s_name, s_shape, s_type, s_obj))
+        maxsize_name = math.max(maxsize_name, #name)
+        maxsize_shape = math.max(maxsize_shape, #shape)
+        maxsize_type = math.max(maxsize_type, #dtype)
     end
 
-    -- prints only list fields
-    if next(list_info) then
+    for i=1, #fields_info do
+        local s_name = ('   - %s, '):format(fields_info["name"] .. string.rep(' ', maxsize_name + 8 - #fields_info["name"]))
+        local s_shape = ('%s, '):format(fields_info["shape"] .. string.rep(' ', maxsize_shape + 3 - #fields_info["shape"]))
+        local s_obj = fields_info["obj"]
+        local comma = ''
+        if #s_obj > 0 then
+            comma = ','
+        end
+        local s_type = fields_info["type"] .. comma .. string.rep(' ', maxsize_type + 3 - #fields_info["type"])
+        print(s_name .. s_shape .. s_type .. s_obj)
+    end
+
+    if #lists_info > 0 then
         print('\n   (Pre-ordered lists)')
-        local maxsize_name = get_max_size(list_info, 'name') + 8
-        local maxsize_shape = get_max_size(list_info, 'shape') + 3
-        for k=1, #list_info do
-            local s_name = string_pad('   - ' .. list_info[k].name .. ',', maxsize_name, ' ')
-            local s_shape = string_pad(list_info[k].shape .. ',', maxsize_shape, ' ')
-            local s_type  = list_info[k].type
-            print(string.format('%s %s %s', s_name, s_shape, s_type))
+
+        for i=1, #lists_info do
+            local s_name = ('   - %s, '):format(lists_info["name"] .. string.rep(' ', maxsize_name_list + 8 - #lists_info["name"]))
+            local s_shape = ('%s, '):format(lists_info["shape"] .. string.rep(' ', maxsize_shape_list + 3 - #lists_info["shape"]))
+            local s_type = lists_info["type"]
+            print(s_name .. s_shape .. s_type)
         end
     end
 end
 
+function SetLoader:__tostring()
+    return ('SetLoader: set<%s>, len<%d>'):format(self.set, self.nelems)
+end
 
-function DataLoader:info(set_name)
+---------------------------------------------------------------------------------------------------
+
+function FieldLoader:__init(hdf5_field, obj_id)
 --[[
-    Prints information about the data fields of a set.
+    Field metadata loader class.
 
-    Displays information of all fields available like field name,
-    size and shape of all sets. If a 'set_name' is provided, it
-    displays only the information for that specific set.
-
-    This method provides the necessary information about a data set
-    internals to help determine how to use/handle a specific field.
+    This class contains several methods to fetch data from a specific
+    field of a set (group) in a hdf5 file. It contains useful information
+    about the field and also several methods to fetch data.
 
     Parameters
     ----------
-    set_name : str
+    hdf5_field : h5py._hl.dataset.Dataset
+        hdf5 field object handler.
+
+    Attributes
+    ----------
+    data : h5py._hl.dataset.Dataset
+        hdf5 group object handler.
+    set : str
         Name of the set.
+    name : str
+        Name of the field.
+    type : type
+        Type of the field's data.
+    shape : tuple
+        Shape of the field's data.
+    fillvalue : int
+        Value used to pad arrays when storing the data in the hdf5 file.
+    obj_id : int
+        Identifier of the field if contained in the 'object_ids' list.
 ]]
-    if set_name then
-        self:_print_info(set_name)
-    else
-        for _, set_name in pairs(self.sets) do
-            self:_print_info(set_name)
-        end
-    end
+
+end
+
+function FieldLoader:get(idx)
+end
+
+function FieldLoader:size()
+end
+
+function FieldLoader:object_field_id()
+end
+
+function FieldLoader:info()
+end
+
+function FieldLoader:_set_to_memory()
+end
+
+function FieldLoader:_get_to_memory()
+end
+
+function FieldLoader:__tostring()
+end
+
+function FieldLoader:__tostring__()
+end
+
+function FieldLoader:__len()
+end
+
+function FieldLoader:__len__()
+end
+
+function FieldLoader:__index()
+end
+
+function FieldLoader:__index__()
 end
