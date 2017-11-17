@@ -13,6 +13,10 @@ local tester
 local test = torch.TestSuite()
 
 
+--------------------------------------------------------------------------------
+-- Tests
+--------------------------------------------------------------------------------
+
 function test.test_convert_str_to_ascii__string()
     local toascii_ = dbc.utils.string_ascii.convert_str_to_ascii
     local str = 'test_string'
@@ -67,6 +71,11 @@ function test.test_convert_ascii_to_str__ByteTensor_2D()
     end
     tester:eq(str, tostring_(str_tensor:byte()))
 end
+
+
+--------------------------------------------------------------------------------
+-- Output
+--------------------------------------------------------------------------------
 
 return function(_tester_)
    tester = _tester_
