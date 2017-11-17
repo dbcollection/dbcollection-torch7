@@ -110,6 +110,11 @@ function test.test_remove()
     dbc.remove({name='new_db', task='new_task', delete_data=true, is_test=true})
 end
 
+function test.test_config_cache()
+    dbc.config_cache({reset_cache=true, is_test=true})
+end
+
+
 --------------------------------------------------------------------------------
 -- Output
 --------------------------------------------------------------------------------
