@@ -18,7 +18,6 @@ compiler:
 
 env:
   - TORCH_LUA_VERSION=LUAJIT21
-  - TRAVIS_DBCOLLECTION_TEST=true
 
 addons:
   apt:
@@ -78,4 +77,5 @@ script:
   - ${INSTALL_PREFIX}/bin/luarocks make rocks/dbcollection-scm-1.rockspec
   - export PATH=${INSTALL_PREFIX}/bin:$PATH
   - export TESTLUA=$(which luajit lua | head -n 1)
+  - export TRAVIS_DBCOLLECTION_TEST=true
   - ${TESTLUA} -e "dbc = require 'dbcollection'; t=dbc.test(); if t.errors[1] then os.exit(1) end"
