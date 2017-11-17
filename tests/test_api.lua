@@ -105,6 +105,10 @@ function test.test_add2()
     end
 end
 
+function test.test_remove()
+    dbc.add({name='new_db', task='new_task', data_dir='new/path/db', file_path='newdb.h5', keywords={'new_category'}, is_test=true})
+    dbc.remove({name='new_db', task='new_task', delete_data=true, is_test=true})
+end
 
 --------------------------------------------------------------------------------
 -- Output
