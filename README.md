@@ -40,7 +40,7 @@ Then, all there is to do is to clone this repo and install the package via `luar
 
 ```
 git clone https://github.com/dbcollection/dbcollection-torch7
-cd dbcollection-torch7 && luarocks make
+cd dbcollection-torch7 && luarocks make rocks/*
 ```
 
 
