@@ -715,7 +715,7 @@ function dbcollection.info_datasets(...)
     local args = initcheck(...)
 
     local command = ('import dbcollection as dbc;' ..
-                     'dbc.info_datasets(db_pattern=%s, show_downloaded=%s, show_available=%s, is_test=%s)')
+                     'dbc.info_datasets(db_pattern=\'%s\', show_downloaded=%s, show_available=%s, is_test=%s)')
                      :format(args.db_pattern,
                              tostring_py(args.show_downloaded),
                              tostring_py(args.show_available),

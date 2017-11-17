@@ -143,6 +143,22 @@ function test.test_info_cache__no_fields()
     dbc.info_cache({name='new_db', paths_info=false, datasets_info=false, categories_info=false, is_test=true})
 end
 
+function test.test_info_datasets()
+    dbc.info_datasets({is_test=true})
+end
+
+function test.test_info_datasets__has_db_pattern()
+    dbc.info_datasets({db_pattern="mnist", is_test=true})
+end
+
+function test.test_info_datasets__show_downloaded_only()
+    dbc.info_datasets({show_downloaded=true, show_available=false, is_test=true})
+end
+
+function test.test_info_datasets__show_available_only()
+    dbc.info_datasets({show_downloaded=false, show_available=true, is_test=true})
+end
+
 --------------------------------------------------------------------------------
 -- Output
 --------------------------------------------------------------------------------
