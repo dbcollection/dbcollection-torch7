@@ -12,6 +12,50 @@ local FieldLoader = torch.class('dbcollection.FieldLoader', dbcollection)
 
 ---------------------------------------------------------------------------------------------------
 
+local function fetch_id_in_list(val, list)
+    for i=1, #list do
+        if list[i] == val then
+            return i
+        end
+    end
+    return {}
+end
+
+local function val_in_table(val, t)
+    for k, v in pairs(t) do
+        if v == vall then
+            return true
+        end
+    end
+    return false
+end
+
+local function fetch_data_shape(size)
+    local size = tensor:size():totable()
+    local shape="("
+    for j=1, #size do
+        shape = shape .. size[j]
+        if j < #size then
+            shape = shape .. ', '
+        else
+            shape = shape .. ')'
+        end
+    end
+    return shape
+end
+
+local function fetch_data_type(hdf5_dataset, size)
+    local ndim = #size
+    local idx = {}
+    for i=1, ndim do
+        table.insert(idx, {1,1})
+    end
+    local data_sample = hdf5_dataset:partial(unpack(idx))
+    return torch.type(data_sample)
+end
+
+---------------------------------------------------------------------------------------------------
+
 function DataLoader:__init(name, task, data_dir, hdf5_filepath)
 --[[
     Dataset metadata loader class.
@@ -84,8 +128,6 @@ function DataLoader:__init(name, task, data_dir, hdf5_filepath)
         self.object_fields[k] = string_ascii.convert_ascii_to_str(data)
     end
 end
-
-
 
 function DataLoader:get(set_name, field, idx)
 --[[
@@ -270,13 +312,26 @@ function DataLoader:info(set_name)
     end
 end
 
-function DataLoader:__tostring()
+function DataLoader:__len__()
+    return #self.sets
+end
+
+function DataLoader:__len()
+    return self:__len__()
+end
+
+function DataLoader:__tostring__()
     return ("Dataloader: %s (%s task)"):format(self.db_name, self.task)
 end
 
+function DataLoader:__tostring()
+    return self:__tostring__()
+end
+
+
 ---------------------------------------------------------------------------------------------------
 
-function SetLoader:__init(hdf5_group, set_name)
+function SetLoader:__init(hdf5_group)
 --[[
     Set metadata loader class.
 
@@ -307,9 +362,8 @@ function SetLoader:__init(hdf5_group, set_name)
     assert(hdf5_group, 'Must input a valid hdf5 group.')
     assert(set_name, 'Must input a valid hdf5 group.')
     self.data = hdf5_group
-    self.set = set_name
-    self.fields = tuple(hdf5_group.keys())
-
+    local s = hdf5._getObjectName(hdf5_group._groupID):split('/')
+    self.set = s[1]
     self.fields = {}
     for k, v in pairs(self.data._children) do
         table.insert(self.fields, k)
@@ -319,29 +373,11 @@ function SetLoader:__init(hdf5_group, set_name)
     self._object_fields = string_ascii.convert_ascii_to_str(object_fields_data)
     self.nelems = self.data:getOrCreateChild('object_fields'):dataspaceSize()[1]
 
-    local function fetch_id_in_list(val, list)
-        for i=1, #list do
-            if list[i] == val then
-                return i
-            end
-        end
-        return {}
-    end
-
     -- add fields to the class
     for field in pairs(self.fields) do
         local obj_id = fetch_id_in_list(field, self._object_fields)
         self[field] = FieldLoader(self.data:getOrCreateChild(field), obj_id)
     end
-end
-
-local function val_in_table(val, t)
-    for k, v in pairs(t) do
-        if v == vall then
-            return true
-        end
-    end
-    return false
 end
 
 function SetLoader:get(field, idx)
@@ -535,18 +571,10 @@ function SetLoader:info()
     local maxsize_shape_lists = 0
     local maxsize_type = 0
     for i=1, #self.fields do
-        local f = self:get(field)
-        local size = f:size():totable()
-        local shape="("
-        for j=1, #size do
-            shape = shape .. size[j]
-            if j < #size then
-                shape = shape .. ', '
-            else
-                shape = shape .. ')'
-            end
-        end
-        local dtype = torch.type(f)
+        local f:getOrCreateChild('field')
+        local size = f:dataspaceSize()
+        local shape = fetch_data_shape(size)
+        local dtype = fetch_data_type(f, size)
         if fields:match('list_') then
             table.insert(lists_info, {
                 name = field,
@@ -598,8 +626,20 @@ function SetLoader:info()
     end
 end
 
-function SetLoader:__tostring()
+function FieldLoader:__len__()
+    return self.nelems
+end
+
+function FieldLoader:__len()
+    return self:__len__()
+end
+
+function SetLoader:__tostring__()
     return ('SetLoader: set<%s>, len<%d>'):format(self.set, self.nelems)
+end
+
+function SetLoader:__tostring()
+    return self:__tostring__()
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -634,41 +674,225 @@ function FieldLoader:__init(hdf5_field, obj_id)
     obj_id : int
         Identifier of the field if contained in the 'object_ids' list.
 ]]
-
+    assert(hdf5_field, 'Must input a valid hdf5 dataset.')
+    self.data = hdf5_field
+    self.hdf5_handler = hdf5_field
+    self._in_memory = false
+    local s = hdf5._getObjectName(hdf5_field._datasetID):split('/')
+    self.set = s[1]
+    self.name = s[2]
+    self.size = self.data:dataspaceSize()
+    self.shape = fetch_data_shape(self.size)
+    self.type = fetch_data_type(self.data, self.size)
+    self.ids_list = {}
+    for i=1, #size do
+        table.insert(self.ids_list, {1, size[i]})
+    end
+    self.ndims = #self.size
+    -- fillvalue not implemented in hdf5 lib
+    self.obj_id = obj_id
 end
 
 function FieldLoader:get(idx)
+--[[
+    Retrieves data of the field from the dataset's hdf5 metadata file.
+
+    This method retrieves the i'th data from the hdf5 file. Also, it is
+    possible to retrieve multiple values by inserting a list/tuple of
+    number values as indexes.
+
+    Parameters
+    ----------
+    idx : number/table, optional
+        Index number of he field. If it is a list, returns the data
+        for all the value indexes of that list.
+
+    Returns
+    -------
+    torch.*Tensor
+        Numpy array containing the field's data.
+    table
+        List of tensors if using a list of indexes.
+]]
+    assert(idx, 'Must input a number or table as input.')
+    local dtype = type(idx)
+    assert(dtype == 'number' or dtype == 'table', ('Must input a number or table as input: %s.'):format(dtype))
+    local data = {}
+    if idx then
+        if dtype == 'number' then
+            if self._in_memory then
+                data = self.data[idx]
+            else
+                local id = self.ids_list
+                id[1][1] = idx
+                id[1][2] = idx
+                data = self.data:partial(unpack(id))
+            end
+        else
+            if self._in_memory then
+                for i=1, #idx do
+                    local sample = self.data[idx[i]]
+                    if i > 1 then
+                        data = data:cat(sample, 1)
+                    else
+                        data = sample
+                    end
+                end
+            else
+                for i=1, #idx do
+                    local id = self.ids_list
+                    id[1][1] = idx[i]
+                    id[1][2] = idx[i]
+                    local sample = self.data:partial(unpack(id))
+                    if i > 1 then
+                        data = data:cat(sample, 1)
+                    else
+                        data = sample
+                    end
+                end
+            end
+        end
+    else
+        if self._in_memory then
+            data = self.data
+        else
+            data = self.data:all()
+        end
+    end
+    return data
 end
 
 function FieldLoader:size()
+--[[
+    Size of the field.
+
+    Returns the number of the elements of the field.
+
+    Returns
+    -------
+    table
+        Returns the size of the field.
+]]
+    return self.size
 end
 
 function FieldLoader:object_field_id()
+--[[
+    Retrieves the index position of the field in the 'object_ids' list.
+
+    This method returns the position of the field in the 'object_ids' object.
+    If the field is not contained in this object, it returns a null value.
+
+    Returns
+    -------
+    int
+        Index of the field in the 'object_ids' list.
+]]
+    return self.obj_id
 end
 
 function FieldLoader:info()
+--[[
+    Prints information about the field.
+
+    Displays information like name, size and shape of the field.
+]]
+    if self.obj_id then
+        print(('Field: %s,  shape = %s,  dtype = %s,  (in \'object_ids\', position = %d)')
+              :format(self.name, str(self.shape), str(self.type), self.obj_id))
+    else
+        print(('Field: %s,  shape = %s,  dtype = %s')
+              :format(self.name, str(self.shape), str(self.type)))
+    end
 end
 
-function FieldLoader:_set_to_memory()
+function FieldLoader:_set_to_memory(is_in_memory)
+--[[
+    Stores the contents of the field in a numpy array if True.
+
+    Parameters
+    ----------
+    is_in_memory : bool
+        Move the data to memory (if True).
+]]
+    if is_in_memory then
+        self.data = self.hdf5_handler:all()
+    else
+        self.data = self.hdf5_handler
+    end
+    self._in_memory = is_in_memory
 end
 
-function FieldLoader:_get_to_memory()
-end
+function FieldLoader:to_memory(is_to_memory)
+--[[
+    Modifies how data is accessed and stored.
 
-function FieldLoader:__tostring()
+    Accessing data from a field can be done in two ways: memory or disk.
+    To enable data allocation and access from memory requires the user to
+    specify a boolean. If set to True, data is allocated to a numpy ndarray
+    and all accesses are done in memory. Otherwise, data is kept in disk and
+    accesses are done using the HDF5 object handler.
+
+    Parameters
+    ----------
+    is_to_memory : bool
+        Move the data to memory (if True).
+]]
+    self:_set_to_memory(is_to_memory)
 end
 
 function FieldLoader:__tostring__()
+    if self._in_memory then
+        s = ('FieldLoader: <torch.*Tensor "%s": shape %s, type "%s">')
+            :format(self.name, self.shape, self.type)
+    else
+        s = ('FieldLoader: <HDF5File "%s": shape %s, type "%s">')
+            :format(self.name, self.shape, self.type)
+    end
+    return s
+end
+
+function FieldLoader:__tostring()
+    return self:__tostring__()
+end
+
+
+function FieldLoader:__len__()
+    return self.size
 end
 
 function FieldLoader:__len()
+    return self:__len__()
 end
 
-function FieldLoader:__len__()
+function FieldLoader:__index__(idx)
+    assert(idx, 'Error: must input a non-empty index')
+    if self._in_memory then
+        return self.data:__index__(idx)
+    else
+        local dtype = type(idx)
+        local ids = self.ids_list
+        if dtype == 'number' then
+            ids[1][1] = idx
+            ids[1][2] = idx
+        else
+            assert(#idx > self.ndims, ('too many indices provided: got %d, max expected %d')
+                                      :format(#idx, self.ndims))
+            for i=1, #idx do
+                if type(idx[i]) == 'number' then
+                    ids[i][1] = idx[i]
+                    ids[i][2] = idx[i]
+                else
+                    ids[i][1] = idx[i][1] or ids[i][1]
+                    ids[i][2] = idx[i][2] or ids[i][2]
+                end
+            end
+        end
+        local sample = self.data:partial(unpack(ids))
+        return sample
+    end
 end
 
-function FieldLoader:__index()
-end
-
-function FieldLoader:__index__()
+function FieldLoader:__index(idx)
+    return self:__index__(idx)
 end
