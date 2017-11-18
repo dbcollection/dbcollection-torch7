@@ -488,7 +488,7 @@ function SetLoader:object(idx, convert_to_value)
             end
             assert(min==1, ('Table must have indexes >= 1.'))
         else
-            error(('Must insert a table or number as input: %s':format(type(idx)))
+            error(('Must insert a table or number as input: %s'):format(type(idx)))
         end
     end
 
@@ -571,7 +571,7 @@ function SetLoader:info()
     local maxsize_shape_lists = 0
     local maxsize_type = 0
     for i=1, #self.fields do
-        local f:getOrCreateChild('field')
+        local f = self.data:getOrCreateChild('field')
         local size = f:dataspaceSize()
         local shape = fetch_data_shape(size)
         local dtype = fetch_data_type(f, size)
