@@ -6,7 +6,7 @@ local hdf5 = require 'hdf5'
 local dbcollection = require 'dbcollection.env'
 local string_ascii = require 'dbcollection.utils.string_ascii'
 
-local DataLoader = torch.class('dbcollection.DatasetLoader', dbcollection)
+local DataLoader = torch.class('dbcollection.DataLoader', dbcollection)
 local SetLoader = torch.class('dbcollection.SetLoader', dbcollection)
 local FieldLoader = torch.class('dbcollection.FieldLoader', dbcollection)
 
@@ -31,7 +31,6 @@ local function val_in_table(val, t)
 end
 
 local function fetch_data_shape(size)
-    local size = tensor:size():totable()
     local shape="("
     for j=1, #size do
         shape = shape .. size[j]
@@ -120,12 +119,14 @@ function DataLoader:__init(name, task, data_dir, hdf5_filepath)
         -- add set to the table
         table.insert(self.sets, k)
 
-        self['k'] = dbcollection.SetLoader(self.file:read(self.root_path + k), k)
+        self['k'] = dbcollection.SetLoader(self.file:read(self.root_path .. k), k)
 
         -- fetch list of field names that compose the object list.
-        local data = self.file:read(('%s/%s/object_fields'):format(self.root_path, k)):all()
-        if data:dim()==1 then data = data:view(1,-1) end
-        self.object_fields[k] = string_ascii.convert_ascii_to_str(data)
+        local object_fields = self.file:read(self.root_path .. k ..'/object_fields'):all()
+        if object_fields:dim() == 1 then
+            object_fields = object_fields:view(1,-1)
+        end
+        self.object_fields[k] = string_ascii.convert_ascii_to_str(object_fields)
     end
 end
 
@@ -316,16 +317,8 @@ function DataLoader:__len__()
     return #self.sets
 end
 
-function DataLoader:__len()
-    return self:__len__()
-end
-
 function DataLoader:__tostring__()
     return ("Dataloader: %s (%s task)"):format(self.db_name, self.task)
-end
-
-function DataLoader:__tostring()
-    return self:__tostring__()
 end
 
 
@@ -360,23 +353,23 @@ function SetLoader:__init(hdf5_group)
         Number of rows in 'object_ids'.
 ]]
     assert(hdf5_group, 'Must input a valid hdf5 group.')
-    assert(set_name, 'Must input a valid hdf5 group.')
-    self.data = hdf5_group
-    local s = hdf5._getObjectName(hdf5_group._groupID):split('/')
+    self.hdf5_group = hdf5_group
+    local s = hdf5._getObjectName(self.hdf5_group._groupID):split('/')
     self.set = s[1]
     self.fields = {}
-    for k, v in pairs(self.data._children) do
+    for k, v in pairs(self.hdf5_group._children) do
         table.insert(self.fields, k)
     end
     table.sort(self.fields)
-    local object_fields_data = self.data:getOrCreateChild('object_fields'):all()
+    local object_fields_data = self.hdf5_group:getOrCreateChild('object_fields'):all()
     self._object_fields = string_ascii.convert_ascii_to_str(object_fields_data)
-    self.nelems = self.data:getOrCreateChild('object_fields'):dataspaceSize()[1]
+    self.nelems = self.hdf5_group:getOrCreateChild('object_ids'):dataspaceSize()[1]
 
     -- add fields to the class
-    for field in pairs(self.fields) do
+    for _, field in pairs(self.fields) do
         local obj_id = fetch_id_in_list(field, self._object_fields)
-        self[field] = FieldLoader(self.data:getOrCreateChild(field), obj_id)
+        local h5_field = self.hdf5_group:getOrCreateChild(field)
+        self[field] = dbcollection.FieldLoader(h5_field, obj_id)
     end
 end
 
@@ -521,7 +514,7 @@ function SetLoader:size(field)
     assert(val_in_table(field, self._object_fields),
            ('Field \'%s\' does not exist in the \'%s\' set.')
            :format(field, self.set))
-    return self.data:getOrCreateChild(field):dataspaceSize()
+    return self.hdf5_group:getOrCreateChild(field):dataspaceSize()
 end
 
 function SetLoader:list()
@@ -571,7 +564,7 @@ function SetLoader:info()
     local maxsize_shape_lists = 0
     local maxsize_type = 0
     for i=1, #self.fields do
-        local f = self.data:getOrCreateChild('field')
+        local f = self.hdf5_group:getOrCreateChild('field')
         local size = f:dataspaceSize()
         local shape = fetch_data_shape(size)
         local dtype = fetch_data_type(f, size)
@@ -630,17 +623,10 @@ function FieldLoader:__len__()
     return self.nelems
 end
 
-function FieldLoader:__len()
-    return self:__len__()
-end
-
 function SetLoader:__tostring__()
     return ('SetLoader: set<%s>, len<%d>'):format(self.set, self.nelems)
 end
 
-function SetLoader:__tostring()
-    return self:__tostring__()
-end
 
 ---------------------------------------------------------------------------------------------------
 
@@ -685,8 +671,8 @@ function FieldLoader:__init(hdf5_field, obj_id)
     self.shape = fetch_data_shape(self.size)
     self.type = fetch_data_type(self.data, self.size)
     self.ids_list = {}
-    for i=1, #size do
-        table.insert(self.ids_list, {1, size[i]})
+    for i=1, #self.size do
+        table.insert(self.ids_list, {1, self.size[i]})
     end
     self.ndims = #self.size
     -- fillvalue not implemented in hdf5 lib
@@ -852,23 +838,20 @@ function FieldLoader:__tostring__()
     return s
 end
 
-function FieldLoader:__tostring()
-    return self:__tostring__()
-end
-
-
 function FieldLoader:__len__()
     return self.size
 end
 
-function FieldLoader:__len()
-    return self:__len__()
-end
-
 function FieldLoader:__index__(idx)
     assert(idx, 'Error: must input a non-empty index')
+    -- ***temporary fix***
+    -- see https://github.com/torch/torch7/blob/a2873a95a500e03c8f7eeb363cdb7058cc297f5b/lib/luaT/README.md#operator-overloading
+    if type(idx) == 'string' then
+        return false
+    end
+    -- ***temporary fix***
     if self._in_memory then
-        return self.data:__index__(idx)
+        return self.data[idx], true
     else
         local dtype = type(idx)
         local ids = self.ids_list
@@ -889,10 +872,6 @@ function FieldLoader:__index__(idx)
             end
         end
         local sample = self.data:partial(unpack(ids))
-        return sample
+        return sample, true
     end
-end
-
-function FieldLoader:__index(idx)
-    return self:__index__(idx)
 end
