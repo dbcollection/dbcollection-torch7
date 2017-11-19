@@ -54,7 +54,6 @@ end
 -- Tests
 --------------------------------------------------------------------------------
 
-
 function test.test_download_mnist()
     local info = fetch_minst_info()
     info.extract_data = true
