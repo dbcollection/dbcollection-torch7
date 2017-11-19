@@ -22,7 +22,10 @@ download/process/management.
 
 require 'dbcollection.api'
 require 'dbcollection.loader'
+--require 'dbcollection.cache'
 require 'dbcollection.utils'
 require 'dbcollection.tests.test'
+
+--dbcollection.cache = dbcollection.CacheManager()
 
 return dbcollection
