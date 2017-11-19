@@ -25,6 +25,10 @@ local function create_dummy_hdf5_file()
     if paths.filep(hdf5_file) then
         os.execute('rm -rf ' .. hdf5_file)
     end
+    local dirname = paths.dirname(hdf5_file)
+    if not paths.dirp(dirname) then
+        os.execute('mkdir -p ' .. dirname)
+    end
     local h5_obj = hdf5.open(hdf5_file, 'w')
     local object_fields = str_to_ascii({'data'})
     h5_obj:write('/train/data', torch.repeatTensor(torch.range(1,10), 10, 1))
