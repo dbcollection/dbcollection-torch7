@@ -4,18 +4,47 @@
     Warning: Requires Torch7 to be installed.
 --]]
 
-
 -- initializations
 require 'paths'
 local dbc = require 'dbcollection.env'
+local hdf5 = require 'hdf5'
+
+local str_to_ascii = dbc.utils.string_ascii.convert_str_to_ascii
 
 local tester
 local test = torch.TestSuite()
 
 
-------------
--- Tests
-------------
+--------------------------------------------------------------------------------
+-- Data setup
+--------------------------------------------------------------------------------
+
+local hdf5_file = paths.concat(paths.home, 'tmp', 'dbcollection', 'dummy.h5')
+
+local function create_dummy_hdf5_file()
+    if paths.filep(hdf5_file) then
+        os.execute('rm -rf ' .. hdf5_file)
+    end
+    local h5_obj = hdf5.open(hdf5_file, 'w')
+    local object_fields = str_to_ascii({'data'})
+    h5_obj:write('/train/data', torch.repeatTensor(torch.range(1,10), 10, 1))
+    h5_obj:write('/train/object_fields', object_fields)
+    h5_obj:write('/train/object_ids', torch.range(1,10))
+    h5_obj:write('/test/data', torch.repeatTensor(torch.range(1,10), 5, 1))
+    h5_obj:write('/test/object_fields', object_fields)
+    h5_obj:write('/test/object_ids', torch.range(1,5))
+    h5_obj:close()
+end
+
+create_dummy_hdf5_file()
+
+local function load_dummy_hdf5_file()
+    if not paths.filep(hdf5_file) then
+        create_dummy_hdf5_file()
+    end
+    return hdf5.open(hdf5_file, 'r')
+end
+
 
 function setUp()
     local home_dir = paths.home
@@ -46,163 +75,51 @@ function setUp()
     return loader, utils
 end
 
-function test.test_get_all()
-    local sample_classes = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
 
-    -- setup data loader
-    local loader, utils = setUp()
+--------------------------------------------------------------------------------
+-- Tests
+--------------------------------------------------------------------------------
 
-    -- call get() method
-    local data = loader:get('train', 'classes');
-
-    -- convert double to char
-    local classes = utils.string_ascii.convert_ascii_to_str(data)
-
-    tester:eq(sample_classes, classes)
+function test.test_init_FieldLoader_class()
+    local h5obj = load_dummy_hdf5_file()
+    local obj_id = 1
+    local fieldLoader = dbc.FieldLoader(h5obj:read('/train/data'), obj_id)
+    tester:assert(fieldLoader ~= nil)
+    tester:assert(fieldLoader._in_memory ~= nil)
+    tester:eq(fieldLoader.name, 'data', 'Names are note the same')
+    tester:eq(fieldLoader.size, {10, 10}, 'Sizes are not the same')
 end
 
-function test.test_get_range()
-    local sample_classes = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
 
-    -- setup data loader
-    local loader, utils = setUp()
-
-    -- call get() method
-    local data = loader:get('train', 'classes', {1,10})
-
-    -- convert double to char
-    local classes = utils.string_ascii.convert_ascii_to_str(data)
-
-    tester:eq(sample_classes, classes)
+function test.test_init_SetLoader_class()
+    local h5obj = load_dummy_hdf5_file()
+    local setLoader = dbc.SetLoader(h5obj:read('/test'))
+    tester:assert(setLoader ~= nil)
+    tester:eq(setLoader.set, 'test')
+    tester:eq(setLoader._object_fields, 'data')
+    tester:eq(setLoader.nelems, 5)
 end
 
-function test.test_get_range2()
-    local sample_classes = {'5', '6', '7', '8', '9'}
-
-    -- setup data loader
-    local loader, utils = setUp()
-
-    -- call get() method
-    local data = loader:get('train', 'classes', {6,10})
-
-    -- convert double to char
-    local classes = utils.string_ascii.convert_ascii_to_str(data)
-
-    tester:eq(sample_classes, classes)
+function test.test_init_DataLoader_class()
+    local name = 'some_db'
+    local task = 'task'
+    local data_dir = './some/dir'
+    local file = hdf5_file
+    local DataLoader = dbc.DataLoader(name, task, data_dir, file)
+    tester:assert(DataLoader ~=  nil)
+    tester:eq(DataLoader.db_name, name)
+    tester:eq(DataLoader.task, task)
+    tester:eq(DataLoader.data_dir, data_dir)
+    tester:eq(DataLoader.hdf5_filepath, file)
+    tester:eq(DataLoader.sets, {'test','train'})
 end
 
-function test.test_object_single()
-    local sample_ids = torch.Tensor({{1, 6}})
 
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    local ids = loader:object('train', 1)
-
-    tester:eq(sample_ids:double(), ids:double())
-end
-
-function test.test_object_two()
-    local sample_ids = torch.Tensor({{1, 6}, {2, 1}})
-
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    local ids = loader:object('train', {1, 2})
-
-    tester:eq(sample_ids:double(), ids:double())
-end
-
-function test.test_size_1()
-    local sample_ids = {10, 2}
-
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    local cls_size = loader:size('train', 'classes')
-
-    tester:eq(sample_ids, cls_size)
-end
-
-function test.test_size_2()
-    local sample_ids = {60000, 2}
-
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    local cls_size = loader:size('train')
-
-    tester:eq(sample_ids, cls_size)
-end
-
-function test.test_list()
-    local sample_field_names = {'classes',
-                                'images',
-                                'labels',
-                                'list_images_per_class',
-                                'object_fields',
-                                'object_ids'}
-
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    local field_names = loader:list('train')
-    table.sort(field_names)
-
-    tester:eq(sample_field_names, field_names)
-end
-
-function test.test_object_field_id_1()
-    local sample_idx = 1
-
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    local res = loader:object_field_id('train', 'images')
-
-    tester:eq(sample_idx, res)
-end
-
-function test.test_object_field_id_2()
-    local sample_idx = 2
-
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    local res = loader:object_field_id('train', 'labels')
-
-    tester:eq(sample_idx, res)
-end
-
-function test.test_info()
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    loader:info()
-
-    tester:assert(true)
-end
-
-function test.test_info_set()
-    -- setup data loader
-    local loader = setUp()
-
-    -- call object() method
-    loader:info('test')
-
-    tester:assert(true)
-end
-
+--------------------------------------------------------------------------------
+-- Output
+--------------------------------------------------------------------------------
 
 return function(_tester_)
-   tester = _tester_
-   return test
-end
+    tester = _tester_
+    return test
+ end
