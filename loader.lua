@@ -1118,14 +1118,15 @@ function FieldLoader:to_memory(is_to_memory)
 end
 
 function FieldLoader:__tostring__()
+    local str
     if self._in_memory then
-        s = ('FieldLoader: <torch.*Tensor "%s": shape %s, type "%s">')
-            :format(self.name, self.shape, self.type)
+        str = ('FieldLoader: <torch.*Tensor "%s": shape %s, type "%s">')
+              :format(self.name, self.shape, self.type)
     else
-        s = ('FieldLoader: <HDF5File "%s": shape %s, type "%s">')
-            :format(self.name, self.shape, self.type)
+        str = ('FieldLoader: <HDF5File "%s": shape %s, type "%s">')
+              :format(self.name, self.shape, self.type)
     end
-    return s
+    return str
 end
 
 function FieldLoader:__len__()
