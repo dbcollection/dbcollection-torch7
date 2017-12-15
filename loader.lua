@@ -12,7 +12,7 @@ local FieldLoader = torch.class('dbcollection.FieldLoader', dbcollection)
 
 ---------------------------------------------------------------------------------------------------
 
-local function fetch_id_in_list(val, list)
+local function get_value_id_in_list(val, list)
     for i=1, #list do
         if list[i] == val then
             return i
@@ -371,7 +371,7 @@ function SetLoader:__init(hdf5_group)
 
     -- add fields to the class
     for _, field in pairs(self.fields) do
-        local obj_id = fetch_id_in_list(field, self._object_fields)
+        local obj_id = get_value_id_in_list(field, self._object_fields)
         local h5_field = self.hdf5_group:getOrCreateChild(field)
         self[field] = dbcollection.FieldLoader(h5_field, obj_id)
     end
