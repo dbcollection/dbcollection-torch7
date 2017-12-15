@@ -35,12 +35,16 @@ local function convert_str_to_ascii(input)
     local ascii_tensor = torch.CharTensor(#input, maximum_lenght):fill(0)
 
     -- copy data to the tensor
-    local s_data = ascii_tensor:data()
-    for k, v in ipairs(input) do
-        ffi.copy(s_data, v)
-        s_data = s_data + maximum_lenght
-    end
+    copy_string_to_tensor(input, ascii_tensor, maximum_lenght)
     return ascii_tensor
+end
+
+local function copy_string_to_tensor(str, tensor, size)
+    local s_data = tensor:data()
+    for k, v in ipairs(str) do
+        ffi.copy(s_data, v)
+        s_data = s_data + size
+    end
 end
 
 ------------------------------------------------------------------------------------------------------------
