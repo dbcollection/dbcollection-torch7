@@ -421,8 +421,10 @@ function SetLoader:__init(hdf5_group)
 end
 
 function SetLoader:_get_set_name()
-    local s = hdf5._getObjectName(self.hdf5_group._groupID):split('/')
-    return s[1]
+    local str = hdf5._getObjectName(self.hdf5_group._groupID)
+    assert(str, 'No string exists!')
+    local str_split = str:split('/')
+    return str_split[1]
 end
 
 function SetLoader:_get_fields()
