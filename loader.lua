@@ -679,68 +679,194 @@ function SetLoader:info()
     internals to help determine how to use/handle a specific field.
 ]]
     print(('\n> Set: {}'):format(self.set))
+    self:_set_fields_info()
+    self:_print_fields_info()
+    self:_print_lists_info()
+end
 
-    local fields_info = {}
-    local lists_info = {}
-    local maxsize_name = 0
-    local maxsize_shape = 0
-    local maxsize_name_lists = 0
-    local maxsize_shape_lists = 0
-    local maxsize_type = 0
-    for i=1, #self.fields do
-        local f = self.hdf5_group:getOrCreateChild('field')
-        local size = f:dataspaceSize()
-        local shape = get_data_shape(size)
-        local dtype = get_data_type_hdf5(f, size)
-        if fields:match('list_') then
-            table.insert(lists_info, {
-                name = field,
-                shape = ('shape = %s'):format(shape),
-                type = ('dtype = %s'):format(dtype)
-            })
-        else
-            local s_obj = ''
-            if is_val_in_table(field, self._object_fields) then
-                s_obj = ("(in 'object_ids', position = {})")
-                        :format(self.object_field_id(field))
-            end
-            table.insert(fields_info, {
-                name = field,
-                shape = ('shape = %s'):format(shape),
-                type = ('dtype = %s'):format(dtype),
-                obj = s_obj
-            })
-            maxsize_name_lists = math.max(maxsize_name_lists, #field)
-            maxsize_shape_lists = math.max(maxsize_shape_lists, #dtype)
-        end
-
-        maxsize_name = math.max(maxsize_name, #name)
-        maxsize_shape = math.max(maxsize_shape, #shape)
-        maxsize_type = math.max(maxsize_type, #dtype)
+function SetLoader:_set_fields_info()
+    if self._fields_info == nil then
+        self:_init_info_vars()
+        self:_set_info_data()
     end
+end
 
-    for i=1, #fields_info do
-        local s_name = ('   - %s, '):format(fields_info["name"] .. string.rep(' ', maxsize_name + 8 - #fields_info["name"]))
-        local s_shape = ('%s, '):format(fields_info["shape"] .. string.rep(' ', maxsize_shape + 3 - #fields_info["shape"]))
-        local s_obj = fields_info["obj"]
-        local comma = ''
-        if #s_obj > 0 then
-            comma = ','
-        end
-        local s_type = fields_info["type"] .. comma .. string.rep(' ', maxsize_type + 3 - #fields_info["type"])
+function SetLoader:_init_info_vars()
+    self._fields_info = {}
+    self._lists_info = {}
+    self._sizes_info = self:_init_max_sizes()
+end
+
+function SetLoader:_init_max_sizes()
+    return {
+        name = 0,
+        shape = 0,
+        type = 0,
+        name_list = 0,
+        shape_list = 0
+    }
+end
+
+function SetLoader:_set_info_data()
+    for i=1, #self.fields do
+        self:_set_field_data(self.fields[i])
+    end
+end
+
+function SetLoader:_set_field_data(field)
+    assert(field)
+    local name, shape, dtype, name_lists, shape_lists = self:_get_field_metadata(field)
+    self:_set_max_sizes_info(#name, #shape, #dtype, #name_lists, #shape_lists)
+end
+
+function SetLoader:_get_field_metadata(name)
+    assert(name)
+    local size, shape, dtype = self:_get_field_size_shape_type(field)
+    local name_lists, shape_lists = self:_set_field_metadata(field, shape, dtype)
+    return size, shape, dtype, name_lists, shape_lists
+end
+
+function SetLoader:_get_field_size_shape_type(field_name)
+    assert(field_name)
+    local hd5_dataset = self:_get_hdf5_dataset(field_name)
+    local size = hd5_dataset:dataspaceSize()
+    local shape = get_data_shape(size)
+    local dtype = get_data_type_hdf5(hd5_dataset, size)
+    return size, shape, dtype
+end
+
+function SetLoader:_set_field_metadata(field, shape, dtype)
+    assert(field)
+    assert(shape)
+    assert(dtype)
+    local name_lists, shape_lists
+    if self:_is_field_a_list(field) then
+        name_lists, shape_lists = self:_set_field_metadata_list(field, shape, dtype)
+    else
+        name_lists, shape_lists = self:_set_field_metadata_default(field, shape, dtype)
+    end
+    return name_lists, shape_lists
+end
+
+function SetLoader:_is_field_a_list(field)
+    assert(field)
+    if field:match('list_') then
+        return true
+    else
+        return false
+    end
+end
+
+function SetLoader:_set_field_metadata_list(field, shape, dtype)
+    assert(field)
+    assert(shape)
+    assert(dtype)
+    table.insert(self._lists_info, {
+        name = field,
+        shape = ('shape = %s'):format(shape),
+        type = ('dtype = %s'):format(dtype)
+    })
+    return '', ''
+end
+
+function SetLoader:_set_field_metadata_default(field, shape, dtype)
+    assert(field)
+    assert(shape)
+    assert(dtype)
+    local s_obj = ''
+    if is_val_in_table(field, self._object_fields) then
+        s_obj = ("(in 'object_ids', position = {})"):format(self.object_field_id(field))
+    end
+    table.insert(self._fields_info, {
+        name = field,
+        shape = ('shape = %s'):format(shape),
+        type = ('dtype = %s'):format(dtype),
+        obj = s_obj
+    })
+    return field, dtype
+end
+
+function SetLoader:_set_max_sizes_info(size_name, size_shape, size_dtype, size_name_lists, size_shape_lists)
+    assert(size_name)
+    assert(size_shape)
+    assert(size_dtype)
+    assert(size_name_lists)
+    assert(size_shape_lists)
+    self._sizes_info.name = math.max(self._sizes_info.name, size_name)
+    self._sizes_info.shape = math.max(self._sizes_info.hape, size_shape)
+    self._sizes_info.type = math.max(self._sizes_info.type, size_dtype)
+    self._sizes_info.name_list = math.max(self._sizes_info.name_list, size_name_lists)
+    self._sizes_info.shape_list = math.max(self._sizes_info.shape_list, size_shape_lists)
+end
+
+function SetLoader:_print_fields_info()
+    for i=1, #self._fields_info do
+        local field_info = self._fields_info[i]
+        local s_name = self:_get_field_name_str(i)
+        local s_shape = self:_get_field_shape_str(i)
+        local s_obj = self:_fields_info[i]["obj"]
+        local s_type = self:_get_field_type_str(i, #s_obj > 0)
         print(s_name .. s_shape .. s_type .. s_obj)
     end
+end
 
-    if #lists_info > 0 then
+function SetLoader:_get_field_name_str(idx)
+    assert(idx)
+    local offset = 8
+    local name = self._fields_info[idx]['name']
+    local max_size = self._sizes_info.name
+    local str_padding = string.rep(' ', max_size + offset - #name)
+    return ('   - %s, '):format(name .. str_padding)
+end
+
+function SetLoader:_get_field_shape_str(idx)
+    assert(idx)
+    local offset = 3
+    local shape = self._fields_info[idx]["shape"]
+    local max_size = self._sizes_info.shape
+    local str_padding = string.rep(' ', max_size + offset - #shape)
+    return ('%s, '):format(shape .. str_padding)
+end
+
+function SetLoader:_get_field_type_str(idx, is_comma)
+    assert(idx)
+    assert(is_comma ~= nil)
+    local offset = 3
+    local dtype = self._fields_info[idx]["type"]
+    local comma = ''
+    if is_comma then
+        comma = ','
+    end
+    local str_padding = string.rep(' ', self._sizes_info.type + offset - #dtype)
+    return fields_info["type"] .. comma .. str_padding
+end
+
+function SetLoader:_print_lists_info()
+    if #self._lists_info > 0 then
         print('\n   (Pre-ordered lists)')
-
         for i=1, #lists_info do
-            local s_name = ('   - %s, '):format(lists_info["name"] .. string.rep(' ', maxsize_name_list + 8 - #lists_info["name"]))
-            local s_shape = ('%s, '):format(lists_info["shape"] .. string.rep(' ', maxsize_shape_list + 3 - #lists_info["shape"]))
-            local s_type = lists_info["type"]
+            local s_name = self:_get_list_name_str(idx)
+            local s_shape = self:_get_list_shape_str(idx)
+            local s_type = self._lists_info[idx]["type"]
             print(s_name .. s_shape .. s_type)
         end
     end
+end
+
+function SetLoader:_get_list_name_str(idx)
+    assert(idx)
+    local offset = 8
+    local name = self._lists_info[idx]["name"]
+    local str_padding = string.rep(' ', self._sizes_info.name_list + offset - #name)
+    return s_name = ('   - %s, '):format(name .. str_padding)
+end
+
+function SetLoader:_get_list_shape_str(idx)
+    assert(idx)
+    local offset = 3
+    local shape = self._lists_info[idx]["shape"]
+    local str_padding = string.rep(' ', self._sizes_info.shape_list + offset - #shape)
+    return ('%s, '):format(shape .. str_padding)
 end
 
 function SetLoader:__len__()
