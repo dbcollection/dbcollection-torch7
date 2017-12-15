@@ -21,9 +21,9 @@ local function fetch_id_in_list(val, list)
     return {}
 end
 
-local function val_in_table(val, t)
-    for k, v in pairs(t) do
-        if v == vall then
+local function is_val_in_table(value, source)
+    for key, val in pairs(source) do
+        if val == value then
             return true
         end
     end
@@ -397,7 +397,7 @@ function SetLoader:get(field, idx)
         Table of tensors if using a list of indexes.
 ]]
     assert(field, ('Must input a valid field name: %s'):format(field))
-    assert(val_in_table(field, self.fields), ('Field \'%s\' does not exist in the \'%s\' set.')
+    assert(is_val_in_table(field, self.fields), ('Field \'%s\' does not exist in the \'%s\' set.')
                                              :format(field, self.set))
     return self[field]:get(idx)
 end
@@ -511,7 +511,7 @@ function SetLoader:size(field)
         Returns the size of a field.
 ]]
     local field = field or 'object_ids'
-    assert(val_in_table(field, self._object_fields),
+    assert(is_val_in_table(field, self._object_fields),
            ('Field \'%s\' does not exist in the \'%s\' set.')
            :format(field, self.set))
     return self.hdf5_group:getOrCreateChild(field):dataspaceSize()
@@ -531,7 +531,7 @@ end
 
 function SetLoader:object_field_id(field)
     assert(field, 'Must input a valid field.')
-    assert(val_in_table(field, self._object_fields),
+    assert(is_val_in_table(field, self._object_fields),
            ('Field \'%s\' does not exist \'object_fields\' set.')
            :format(field, self.set))
     local idx
@@ -576,7 +576,7 @@ function SetLoader:info()
             })
         else
             local s_obj = ''
-            if val_in_table(field, self._object_fields) then
+            if is_val_in_table(field, self._object_fields) then
                 s_obj = ("(in 'object_ids', position = {})")
                         :format(self.object_field_id(field))
             end
