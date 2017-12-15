@@ -423,6 +423,7 @@ end
 function SetLoader:_get_set_name()
     local str = hdf5._getObjectName(self.hdf5_group._groupID)
     assert(str, 'No string exists!')
+    print(str)
     local str_split = str:split('/')
     return str_split[1]
 end
