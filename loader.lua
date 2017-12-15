@@ -743,7 +743,7 @@ function SetLoader:info()
     end
 end
 
-function FieldLoader:__len__()
+function SetLoader:__len__()
     return self.nelems
 end
 
