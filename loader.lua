@@ -973,51 +973,69 @@ function FieldLoader:get(idx)
         List of tensors if using a list of indexes.
 ]]
     assert(idx, 'Must input a number or table as input.')
-    local dtype = type(idx)
-    assert(dtype == 'number' or dtype == 'table', ('Must input a number or table as input: %s.'):format(dtype))
+    assert(type(idx) == 'number' or dtype == 'table', ('Must input a number or table as input: %s.'):format(dtype))
     local data = {}
     if idx then
-        if dtype == 'number' then
-            if self._in_memory then
-                data = self.data[idx]
-            else
-                local id = self.ids_list
-                id[1][1] = idx
-                id[1][2] = idx
-                data = self.data:partial(unpack(id))
-            end
-        else
-            if self._in_memory then
-                for i=1, #idx do
-                    local sample = self.data[idx[i]]
-                    if i > 1 then
-                        data = data:cat(sample, 1)
-                    else
-                        data = sample
-                    end
-                end
-            else
-                for i=1, #idx do
-                    local id = self.ids_list
-                    id[1][1] = idx[i]
-                    id[1][2] = idx[i]
-                    local sample = self.data:partial(unpack(id))
-                    if i > 1 then
-                        data = data:cat(sample, 1)
-                    else
-                        data = sample
-                    end
-                end
-            end
-        end
+        return self:_get_range(idx)
     else
-        if self._in_memory then
-            data = self.data
+        return self:_get_all()
+    end
+    return data
+end
+
+function FieldLoader:_get_range(idx)
+    assert(idx)
+    if type(idx) == 'number' then
+        return self:_get_data_single_id(idx)
+    else
+        return self:_get_data_multiple_id(idx)
+    end
+end
+
+function FieldLoader:_get_data_single_id(idx)
+    if self._in_memory then
+        return self:_get_data_memory(idx)
+    else
+        return self:_get_data_hdf5(idx)
+    end
+end
+
+function FieldLoader:_get_data_memory(idx)
+    assert(idx)
+    return self.data[idx]
+end
+
+function FieldLoader:_get_data_hdf5(idx)
+    assert(idx)
+    local id = self.ids_list
+    id[1][1] = idx
+    id[1][2] = idx
+    return self.data:partial(unpack(id))
+end
+
+function FieldLoader:_get_data_multiple_id(idx)
+--[[
+    Returns a single tensor where the first dim rows corresponds to the indexes.
+]]
+    assert(idx)
+    local data
+    for i=1, #idx do
+        local sample = self:_get_data_single_id(idx[i])
+        if i > 1 then
+            data = data:cat(sample, 1)
         else
-            data = self.data:all()
+            data = sample
         end
     end
     return data
+end
+
+function FieldLoader:_get_all()
+    if self._in_memory then
+        return self.data
+    else
+        return self.data:all()
+    end
 end
 
 function FieldLoader:size()
