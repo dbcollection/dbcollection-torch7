@@ -287,12 +287,21 @@ function DataLoader:list(set_name)
         List of all data fields of the dataset.
 ]]
     if set_name then
+        return self:_get_set_list(set_name)
+    else
+        return self:_get_set_list_all()
+    end
+end
+
+function DataLoader:_get_set_list(set_name)
         assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
                                     :format(set_name))
         return self[set_name]:list()
-    else
+end
+
+function DataLoader:_get_set_list_all()
         local out = {}
-        for set_name in pairs(self.sets) do
+    for set_name, _ in pairs(self.sets) do
             out[set_name] = self[set_name]:list()
         end
         return out
