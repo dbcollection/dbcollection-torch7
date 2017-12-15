@@ -1007,10 +1007,42 @@ end
 
 function FieldLoader:_get_data_hdf5(idx)
     assert(idx)
-    local id = self.ids_list
-    id[1][1] = idx
-    id[1][2] = idx
+    local id = self:_get_id(idx)
     return self.data:partial(unpack(id))
+end
+
+function FieldLoader:_get_ids(idx)
+    assert(idx)
+    if type(idx) == 'number' then
+        return self:_get_ids_single(idx)
+    else
+        return self:_get_ids_multiple(idx)
+    end
+end
+
+function FieldLoader:_get_ids_single(idx)
+    assert(idx)
+    local ids = self.ids_list
+    ids[1][1] = idx
+    ids[1][2] = idx
+    return ids
+end
+
+function FieldLoader:_get_ids_multiple(idx)
+    assert(idx)
+    assert(#idx > self.ndims, ('too many indices provided: got %d, max expected %d')
+                              :format(#idx, self.ndims))
+    local ids = self.ids_list
+    for i=1, #idx do
+        if type(idx[i]) == 'number' then
+            ids[i][1] = idx[i]
+            ids[i][2] = idx[i]
+        else
+            ids[i][1] = idx[i][1] or ids[i][1]
+            ids[i][2] = idx[i][2] or ids[i][2]
+        end
+    end
+    return ids
 end
 
 function FieldLoader:_get_data_multiple_id(idx)
@@ -1135,34 +1167,15 @@ end
 
 function FieldLoader:__index__(idx)
     assert(idx, 'Error: must input a non-empty index')
-    -- ***temporary fix***
+    -- vvv **temporary fix** vvv
     -- see https://github.com/torch/torch7/blob/a2873a95a500e03c8f7eeb363cdb7058cc297f5b/lib/luaT/README.md#operator-overloading
     if type(idx) == 'string' then
         return false
     end
-    -- ***temporary fix***
+    -- ^^^ **temporary fix** ^^^
     if self._in_memory then
-        return self.data[idx], true
+        return self:_get_data_memory(idx), true
     else
-        local dtype = type(idx)
-        local ids = self.ids_list
-        if dtype == 'number' then
-            ids[1][1] = idx
-            ids[1][2] = idx
-        else
-            assert(#idx > self.ndims, ('too many indices provided: got %d, max expected %d')
-                                      :format(#idx, self.ndims))
-            for i=1, #idx do
-                if type(idx[i]) == 'number' then
-                    ids[i][1] = idx[i]
-                    ids[i][2] = idx[i]
-                else
-                    ids[i][1] = idx[i][1] or ids[i][1]
-                    ids[i][2] = idx[i][2] or ids[i][2]
-                end
-            end
-        end
-        local sample = self.data:partial(unpack(ids))
-        return sample, true
+        return self:_get_data_hdf5(idx), true
     end
 end
