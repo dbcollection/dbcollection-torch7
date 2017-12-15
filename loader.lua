@@ -47,14 +47,18 @@ local function concat_shape_string(source, new_string, is_not_last)
     return output
 end
 
-local function fetch_data_type(hdf5_dataset, size)
-    local ndim = #size
+local function get_data_type_hdf5(hdf5_dataset, size)
+    local idx = get_atomic_indexes(#size)
+    local data_sample = hdf5_dataset:partial(unpack(idx))
+    return torch.type(data_sample)
+end
+
+local function get_atomic_indexes(dim)
     local idx = {}
     for i=1, ndim do
         table.insert(idx, {1,1})
     end
-    local data_sample = hdf5_dataset:partial(unpack(idx))
-    return torch.type(data_sample)
+    return idx
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -571,7 +575,7 @@ function SetLoader:info()
         local f = self.hdf5_group:getOrCreateChild('field')
         local size = f:dataspaceSize()
         local shape = get_data_shape(size)
-        local dtype = fetch_data_type(f, size)
+        local dtype = get_data_type_hdf5(f, size)
         if fields:match('list_') then
             table.insert(lists_info, {
                 name = field,
@@ -673,7 +677,7 @@ function FieldLoader:__init(hdf5_field, obj_id)
     self.name = s[2]
     self.size = self.data:dataspaceSize()
     self.shape = get_data_shape(self.size)
-    self.type = fetch_data_type(self.data, self.size)
+    self.type = get_data_type_hdf5(self.data, self.size)
     self.ids_list = {}
     for i=1, #self.size do
         table.insert(self.ids_list, {1, self.size[i]})
