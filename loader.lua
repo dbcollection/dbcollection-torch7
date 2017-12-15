@@ -645,17 +645,26 @@ function SetLoader:list()
 end
 
 function SetLoader:object_field_id(field)
+    self:_validate_object_field_id_input(field)
+    local idx = self:_get_object_field_id(field)
+    assert(idx, 'Field does not exist in \'_object_fields\'')
+    return idx
+end
+
+function SetLoader:_validate_object_field_id_input()
     assert(field, 'Must input a valid field.')
     assert(is_val_in_table(field, self._object_fields),
            ('Field \'%s\' does not exist \'object_fields\' set.')
            :format(field, self.set))
-    local idx
+end
+
+function SetLoader:_get_object_field_id(field)
     for i=1, #self._object_fields do
         if field == self._object_fields[i] then
             return i
         end
     end
-    error('Field does not exist in \'_object_fields\'')
+    return nil
 end
 
 function SetLoader:info()
