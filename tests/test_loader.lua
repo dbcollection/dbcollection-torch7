@@ -52,27 +52,27 @@ end
 
 function setUp()
     local home_dir = paths.home
-    local name = 'cifar10'
+    local name = 'mnist'
     local task = 'classification'
 
     local data_dir = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'data')
     local cache_path = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'classification.h5')
 
-    if not paths.filep(cache_path) then
-        local db = dbc.load({name=name, task=task, is_test=true})
-
-        ----------------------------------------
-        -- temporary fix.
-        -- To be removed when the new dbcollection
-        -- Python module version is uploaded to pip.
-        if not paths.filep(cache_path) then
-            cache_path = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'detection.h5')
-        end
-        ----------------------------------------
-    end
+    --if not paths.filep(cache_path) then
+    --    local db = dbc.load({name=name, task=task, is_test=true})
+    --
+    --    ----------------------------------------
+    --    -- temporary fix.
+    --    -- To be removed when the new dbcollection
+    --    -- Python module version is uploaded to pip.
+    --    if not paths.filep(cache_path) then
+    --        cache_path = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'detection.h5')
+    --    end
+    --    ----------------------------------------
+    --end
 
     -- initialize object
-    local loader = dbc.DatasetLoader(name, task, data_dir, cache_path)
+    local loader = dbc.DataLoader(name, task, data_dir, cache_path)
 
     local utils = dbc.utils
 
@@ -84,7 +84,7 @@ end
 -- Tests
 --------------------------------------------------------------------------------
 
-function test.test_init_FieldLoader_class()
+function test.test_FieldLoader__init()
     local h5obj = load_dummy_hdf5_file()
     local obj_id = 1
     local fieldLoader = dbc.FieldLoader(h5obj:read('/train/data'), obj_id)
@@ -94,8 +94,33 @@ function test.test_init_FieldLoader_class()
     tester:eq(fieldLoader.size, {10, 10}, 'Sizes are not the same')
 end
 
+function test.test_FieldLoader_get()
+end
 
-function test.test_init_SetLoader_class()
+function test.test_FieldLoader_size()
+end
+
+function test.test_FieldLoader_object_field_id()
+end
+
+function test.test_FieldLoader_info()
+end
+
+function test.test_FieldLoader_to_memory()
+end
+
+function test.test_FieldLoader__len__()
+end
+
+function test.test_FieldLoader__tostring__()
+end
+
+function test.test_FieldLoader__index__()
+end
+
+------------------------------------------------------------------------------------------------------------
+
+function test.test_SetLoader__init()
     local h5obj = load_dummy_hdf5_file()
     local setLoader = dbc.SetLoader(h5obj:read('/test'))
     tester:assert(setLoader ~= nil)
@@ -103,6 +128,29 @@ function test.test_init_SetLoader_class()
     tester:eq(setLoader._object_fields, 'data')
     tester:eq(setLoader.nelems, 5)
 end
+
+function test.test_SetLoader_get()
+end
+
+function test.test_SetLoader_object()
+end
+
+function test.test_SetLoader_size()
+end
+
+function test.test_SetLoader_list()
+end
+
+function test.test_SetLoader_info()
+end
+
+function test.test_SetLoader__len__()
+end
+
+function test.test_SetLoader__tostring__()
+end
+
+------------------------------------------------------------------------------------------------------------
 
 function test.test_init_DataLoader_class()
     local name = 'some_db'
@@ -118,6 +166,53 @@ function test.test_init_DataLoader_class()
     tester:eq(DataLoader.sets, {'test','train'})
 end
 
+function test.test_DataLoader_open_hdf5_file()
+    local loader, utils  = setUp()
+    tester:assert(loader:_open_hdf5_file() ~=  nil)
+end
+
+function test.test_DataLoader_get_set_names()
+    local loader, utils  = setUp()
+    tester:eq(loader.sets, loader:_get_set_names())
+end
+
+function test.test_DataLoader_get_object_fields()
+    local loader, utils  = setUp()
+    tester:eq(loader.object_fields, loader:_get_object_fields())
+end
+
+function test.test_DataLoader_get()
+    local loader, utils  = setUp()
+end
+
+function test.test_DataLoader_object()
+    local loader, utils  = setUp()
+end
+
+function test.test_DataLoader_size()
+    local loader, utils  = setUp()
+end
+
+function test.test_DataLoader_list()
+    local loader, utils  = setUp()
+end
+
+function test.test_DataLoader_object_field_id()
+    local loader, utils  = setUp()
+end
+
+function test.test_DataLoader_info()
+    local loader, utils  = setUp()
+end
+
+function test.test_DataLoader__len__()
+    local loader, utils  = setUp()
+end
+
+function test.test_DataLoader__tostring__()
+    local loader, utils  = setUp()
+end
+
 
 --------------------------------------------------------------------------------
 -- Output
@@ -126,4 +221,4 @@ end
 return function(_tester_)
     tester = _tester_
     return test
- end
+end
