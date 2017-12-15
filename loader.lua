@@ -487,51 +487,8 @@ function SetLoader:get(field, idx)
 ]]
     assert(field, ('Must input a valid field name: %s'):format(field))
     assert(is_val_in_table(field, self.fields), ('Field \'%s\' does not exist in the \'%s\' set.')
-                                             :format(field, self.set))
+                                                :format(field, self.set))
     return self[field]:get(idx)
-end
-
-function SetLoader:_convert(idx)
---[[
-    Retrieve data from the dataset's hdf5 metadata file in the original format.
-
-    This method fetches all indices of an object(s), and then it looks up for the
-    value for each field in 'object_ids' for a certain index(es), and then it
-    groups the fetches data into a single list.
-
-    Parameters
-    ----------
-    idx : int/table
-        Index number of the field. If it is a list, returns the data
-        for all the indexes of that list as values.
-
-    Returns
-    -------
-    str/int/table
-        Value/list of a field from the metadata cache file.
-]]
-    local indexes = idx
-    if type(idx[1]) == 'number' then
-        indexes = {idx}
-    end
-
-    local output = {}
-    for i=1, #idx do
-        local data = {}
-        for k, field in ipairs(self.object_fields) do
-            if indexes[i][k] > 0 then
-                table.insert(data, self:get(field, indexes[i][k]))
-            else
-                table.insert(data, {})
-            end
-        end
-        table.insert(out, data)
-    end
-    if #output > 1 then
-        return output
-    else
-        return output[1]
-    end
 end
 
 function SetLoader:object(idx, convert_to_value)
@@ -560,26 +517,95 @@ function SetLoader:object(idx, convert_to_value)
         Returns a list of indexes or, if convert_to_value is True,
         a list of data arrays/values.
 ]]
+    local indexes = self:_get_object_indexes(idx)
+    if convert_to_value then
+        indexes = self._convert(indexes)
+    end
+    return indexes
+end
+
+function SetLoader:_get_object_indexes(idx)
+    self:_validate_object_idx(idx)
+    return self:get('object_ids', idx)
+end
+
+function SetLoader:_validate_object_idx(idx)
     if idx then
         if type(idx) == 'number' then
             assert(idx >= 1, ('idx must be >=1: %d'):format(idx))
         elseif type(idx) == 'table' then
-            local min = 1
-            for k, v in pairs(idx) do
-                min = math.min(min, v)
-            end
-            assert(min==1, ('Table must have indexes >= 1.'))
+            assert(self:_is_greater_than_zero(idx), ('Table must have indexes >= 1.'))
         else
             error(('Must insert a table or number as input: %s'):format(type(idx)))
         end
     end
+end
 
-    local indexes = self:get('object_ids', idx)
+function SetLoader:_is_greater_than_zero(idx)
+    local min = 1
+    for k, v in pairs(idx) do
+        min = math.min(min, v)
+    end
+    return min == 1
+end
 
-    if convert_to_value then
-        return self._convert(indexes)
+function SetLoader:_convert(idx)
+    --[[
+        Retrieve data from the dataset's hdf5 metadata file in the original format.
+
+        This method fetches all indices of an object(s), and then it looks up for the
+        value for each field in 'object_ids' for a certain index(es), and then it
+        groups the fetches data into a single list.
+
+        Parameters
+        ----------
+        idx : int/table
+            Index number of the field. If it is a list, returns the data
+            for all the indexes of that list as values.
+
+        Returns
+        -------
+        str/int/table
+            Value/list of a field from the metadata cache file.
+    ]]
+    local indexes = self:_convert_to_table_of_tables(idx)
+    local object_fields = self:_convert_fields_idx_to_val(indexes)
+    return self:_convert_fields_output(object_fields)
+end
+
+function SetLoader:_convert_to_table_of_tables(idx)
+    if type(idx[1]) == 'number' then
+        return {idx}
     else
-        return indexes
+        return idx
+    end
+end
+
+function SetLoader:_convert_fields_idx_to_val(indexes)
+    local output = {}
+    for i=1, #indexes do
+        local data = self:_get_object_fields_data_from_idx(indexes[i])
+        table.insert(output, data)
+    end
+end
+
+function SetLoader:_get_object_fields_data_from_idx(indexes)
+    local data = {}
+    for k, field in ipairs(self.object_fields) do
+        if indexes[k] > 0 then
+            table.insert(data, self:get(field, indexes[k]))
+        else
+            table.insert(data, {})
+        end
+    end
+    return data
+end
+
+function SetLoader:_convert_fields_output(object_fields_values)
+    if #object_fields_values > 1 then
+        return object_fields
+    else
+        return object_fields[1]
     end
 end
 
