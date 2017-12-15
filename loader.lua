@@ -356,11 +356,20 @@ function DataLoader:info(set_name)
         Name of the set.
 ]]
     if set_name then
+        self:_get_set_info(set_name)
+    else
+        self:_get_set_info_all()
+    end
+end
+
+function DataLoader:_get_set_info(set_name)
         assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
                                     :format(set_name))
         self[set_name]:info()
-    else
-        for set_name in pairs(self.sets) do
+end
+
+function DataLoader:_get_set_info_all()
+    for set_name, _ in pairs(self.sets) do
             self[set_name]:info()
         end
     end
