@@ -36,6 +36,14 @@ local function get_cache_file_path(options)
     end
 end
 
+--[[ Load the cache file into memory ]]
+local function load_cache(options)
+    local home_path = get_cache_file_path(options)
+    if not paths.filep(home_path) then
+        dbcollection.config_cache({is_test=options.is_test})
+    end
+    return json.load(home_path)
+end
 
 --[[ parse all booleans to strings in python format ]]
 local function tostring_py(input)
@@ -89,11 +97,73 @@ local function exists_task(cache, name, task)
     end
 end
 
+--[[ check if a task exists in cache for a dataset ]]
+local function exists_task_in_cache(options)
+    assert(options)
+    local cache = load_cache(options)
+    return exists_task(cache, options.name, options.task)
+end
+
 --[[ Return the correct name of the default task for a dataset. ]]
-local function fetch_default_task_name(name)
-    local cmd = 'from dbcollection.manager import fetch_default_task_name;' ..
-                ('print(fetch_default_task_name(\'%s\'))'):format(name)
+local function get_default_task_name(name)
+    local cmd = 'from dbcollection.manager import get_default_task_name;' ..
+                ('print(get_default_task_name(\'%s\'))'):format(name)
     return os.capture(string.format('python -c "%s"', cmd))
+end
+
+--[[ Validates / corrects the task name ]]
+local function validate_task_name(options)
+    assert(options)
+    if options.task == 'default' then
+        options.task= get_default_task_name(options.name)
+    end
+end
+
+--[[ Check if the dataset records exist in the cache ]]
+local function is_dataset_in_cache(options)
+    local cache = load_cache(options)
+    if cache['dataset'][options.name] then
+        return true
+    else
+        return false
+    end
+end
+
+--[[ Download a dataset's data files if there are no records in the cache file ]]
+local function download_data(options)
+    if not is_dataset_in_cache(options) then
+        dbcollection.download({name=options.name,
+                               data_dir=options.data_dir,
+                               extract_data=true,
+                               verbose=options.verbose,
+                               is_test=options.is_test})
+    end
+end
+
+--[[ Processes the dataset's metadata if there are no records in the cache file ]]
+local function process_data(options)
+    if not exists_task_in_cache(options) then
+        dbcollection.process({name=options.name,
+                              task=options.task,
+                              verbose=options.verbose,
+                              is_test=options.is_test})
+    end
+end
+
+--[[ load check if task exists after download + process setup ]]
+local function check_if_task_exists(options)
+    assert(options)
+    if not exists_task_in_cache(options) then
+        error('Dataset name/task not available in cache for load.')
+    end
+end
+
+--[[ Returns a data loader for a dataset ]]
+local function get_data_loader(options)
+    assert(options)
+    local cache = load_cache(options)
+    local data_dir, cache_path = get_dataset_paths(cache, options.name, options.task)
+    return dbcollection.DatasetLoader(options.name, options.task, data_dir, cache_path)
 end
 
 --[[ Get all datasets into a table ]]
@@ -270,7 +340,6 @@ function dbcollection.load(...)
             >>> print('Dataset name: ' .. mnist.db_name)
             Dataset name:  mnist
 
-
         ]],
         {name="name", type="string",
          help="Name of the dataset."},
@@ -288,54 +357,31 @@ function dbcollection.load(...)
          opt = true}
     }
 
-    -- parse options
-    local args = initcheck(...)
-
-    local home_path = get_cache_file_path(args)
-
-    -- check if the .json cache has been initialized
-    if not paths.filep(home_path) then
-        dbcollection.config_cache({is_test=args.is_test}) -- creates the cache file in disk if it doesn't exist
-    end
-
-    -- read the cache file (dbcollection.json)
-    local cache = json.load(home_path)
-
-    -- convert task if equal to 'default'
-    if args.task == 'default' then
-        local task_name = fetch_default_task_name(args.name)
-        args.task = task_name
-    end
-
-    -- check if the dataset exists in the cache
-    if not cache['dataset'][args.name] then
-        dbcollection.download({name=args.name, data_dir=args.data_dir, extract_data=true,
-                          verbose=args.verbose, is_test=args.is_test})
-        cache = json.load(home_path) -- reload the cache file
-    end
-
-    -- check if the task exists in the cache
-    if not exists_task(cache, args.name, args.task) then
-        dbcollection.process({name=args.name, task=args.task, verbose=args.verbose,
-                         is_test=args.is_test})
-        cache = json.load(home_path) -- reload the cache file
-    end
-
-    -- load check if task exists
-    if not cache['dataset'][args.name]["tasks"][args.task] then
-        error('Dataset name/task not available in cache for load.')
-    end
-
-    -- get dataset paths (data + cache)
-    local data_dir, cache_path = get_dataset_paths(cache, args.name, args.task)
-
-    -- load HDF5 file
-    local loader = dbcollection.DatasetLoader(args.name, args.task, data_dir, cache_path)
-
+    local args = initcheck(...)  -- parse options
+    validate_task_name(args)
+    download_data(args)
+    process_data(args)
+    check_if_task_exists(args)
+    local loader = get_data_loader(args)
     return loader
 end
 
 ------------------------------------------------------------------------------------------------------------
+
+local function parse_keywords_format(keywords)
+    local kwords
+    if next(keywords) then
+        local str = ''
+        for i=1, #keywords do
+            str = str .. tostring(keywords[i])
+            if i<#keywords then str = str .. ',' end
+        end
+        kwords = ("['%s']"):format(str)
+    else
+        kwords = '[]'
+    end
+    return kwords
+end
 
 function dbcollection.add(...)
     local initcheck = argcheck{
@@ -394,16 +440,7 @@ function dbcollection.add(...)
     assert(args.file_path, ('Must input a valid dataset name: %s'):format(args.file_path))
 
     -- parse the table into a string in python's format
-    if next(args.keywords) then
-        local str = ''
-        for i=1, #args.keywords do
-            str = str .. tostring(args.keywords[i])
-            if i<#args.keywords then str = str .. ',' end
-        end
-        args.keywords = ("['%s']"):format(str)
-    else
-        args.keywords = '[]'
-    end
+    args.keywords = parse_keywords_format(args.keywords)
 
     local command = ('import dbcollection as dbc;' ..
                     'dbc.add(name=\'%s\',task=\'%s\',data_dir=\'%s\',' ..
@@ -539,8 +576,6 @@ function dbcollection.config_cache(...)
 
             >>> dbc = require 'dbcollection'
             >>> dbc.config_cache({delete_cache_file=true})
-
-
 
         ]],
         {name="field", type="string", default="None",
