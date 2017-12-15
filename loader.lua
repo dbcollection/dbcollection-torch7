@@ -35,9 +35,9 @@ local function get_data_shape(size)
     for j=1, #size do
         shape = concat_shape_string(shape, size[j], j < #size)
     end
-            shape = shape .. ')'
+    shape = shape .. ')'
     return shape
-        end
+end
 
 local function concat_shape_string(source, new_string, is_not_last)
     local output = source .. new_string
@@ -146,17 +146,17 @@ end
 function DataLoader:_get_object_fields_data_from_set(set)
     local hdf5_dataset_path = self.root_path .. set ..'/object_fields'
     local object_fields_data = self.file:read(hdf5_dataset_path):all()
-        if object_fields:dim() == 1 then
+    if object_fields:dim() == 1 then
         object_fields_data = object_fields_data:view(1,-1)
-        end
-    return string_ascii.convert_ascii_to_str(object_fields_data)
     end
+    return string_ascii.convert_ascii_to_str(object_fields_data)
+end
 
 function DataLoader:_set_SetLoaders()
     for k, _ in pairs(self.sets) do
         local hdf5_group_path = self.root_path .. k
         self[k] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path), k)
-end
+    end
 end
 
 function DataLoader:_get_hdf5_group(path)
@@ -256,20 +256,19 @@ function DataLoader:size(set_name, field)
 end
 
 function DataLoader:_get_set_size(set_name, field)
-        assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                    :format(set_name))
+    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                :format(set_name))
     assert(field, 'Must input a field')
-        return self[set_name]:size(field)
+    return self[set_name]:size(field)
 end
 
 function DataLoader:_get_set_size_all(field)
     assert(field, 'Must input a field')
-        local out = {}
+    local out = {}
     for set_name, _ in pairs(self.sets) do
         out[set_name] = self:_get_set_size(set_name, field)
-        end
-        return out
     end
+    return out
 end
 
 function DataLoader:list(set_name)
@@ -294,18 +293,17 @@ function DataLoader:list(set_name)
 end
 
 function DataLoader:_get_set_list(set_name)
-        assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                    :format(set_name))
-        return self[set_name]:list()
+    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                :format(set_name))
+    return self[set_name]:list()
 end
 
 function DataLoader:_get_set_list_all()
-        local out = {}
+    local out = {}
     for set_name, _ in pairs(self.sets) do
-            out[set_name] = self[set_name]:list()
-        end
-        return out
+        out[set_name] = self[set_name]:list()
     end
+    return out
 end
 
 function DataLoader:object_field_id(set_name, field)
@@ -363,15 +361,14 @@ function DataLoader:info(set_name)
 end
 
 function DataLoader:_get_set_info(set_name)
-        assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                    :format(set_name))
-        self[set_name]:info()
+    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
+                                :format(set_name))
+    self[set_name]:info()
 end
 
 function DataLoader:_get_set_info_all()
     for set_name, _ in pairs(self.sets) do
-            self[set_name]:info()
-        end
+        self[set_name]:info()
     end
 end
 
@@ -380,7 +377,7 @@ function DataLoader:__len__()
 end
 
 function DataLoader:__tostring__()
-    return ("Dataloader: %s (%s task)"):format(self.db_name, self.task)
+    return ("DataLoader: %s (%s task)"):format(self.db_name, self.task)
 end
 
 
@@ -416,22 +413,52 @@ function SetLoader:__init(hdf5_group)
 ]]
     assert(hdf5_group, 'Must input a valid hdf5 group.')
     self.hdf5_group = hdf5_group
-    local s = hdf5._getObjectName(self.hdf5_group._groupID):split('/')
-    self.set = s[1]
-    self.fields = {}
-    for k, v in pairs(self.hdf5_group._children) do
-        table.insert(self.fields, k)
-    end
-    table.sort(self.fields)
-    local object_fields_data = self.hdf5_group:getOrCreateChild('object_fields'):all()
-    self._object_fields = string_ascii.convert_ascii_to_str(object_fields_data)
-    self.nelems = self.hdf5_group:getOrCreateChild('object_ids'):dataspaceSize()[1]
+    self.set = self:_get_set_name()
+    self.fields = self:_get_fields()
+    self._object_fields = self:_get_object_fields_data()
+    self.nelems = self:_get_num_elements()
+    self:_load_hdf5_fields()  -- add all hdf5 datasets as data fields
+end
 
-    -- add fields to the class
+function SetLoader:_get_set_name()
+    local s = hdf5._getObjectName(self.hdf5_group._groupID):split('/')
+    return s[1]
+end
+
+function SetLoader:_get_fields()
+    local fields = {}
+    for k, v in pairs(self.hdf5_group._children) do
+        table.insert(fields, k)
+    end
+    table.sort(fields)
+    return fields
+end
+
+function SetLoader:_get_object_fields_data()
+    local object_fields_data = self:_get_hdf5_dataset_data('object_fields')
+    return string_ascii.convert_ascii_to_str(object_fields_data)
+end
+
+function SetLoader:_get_hdf5_dataset_data(name)
+    local hdf5_dataset = self:_get_hdf5_dataset(name)
+    return hdf5_dataset:all()
+end
+
+function SetLoader:_get_hdf5_dataset(name)
+    return self.hdf5_group:getOrCreateChild(name)
+end
+
+function SetLoader:_get_num_elements()
+    local hdf5_dataset = self:_get_hdf5_dataset('object_ids')
+    local size = hdf5_dataset:dataspaceSize()
+    return size[1]
+end
+
+function SetLoader:_load_hdf5_fields()
     for _, field in pairs(self.fields) do
         local obj_id = get_value_id_in_list(field, self._object_fields)
-        local h5_field = self.hdf5_group:getOrCreateChild(field)
-        self[field] = dbcollection.FieldLoader(h5_field, obj_id)
+        local hdf5_dataset = self:_get_hdf5_dataset(field)
+        self[field] = dbcollection.FieldLoader(hdf5_dataset, obj_id)
     end
 end
 
