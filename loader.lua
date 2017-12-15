@@ -914,19 +914,41 @@ function FieldLoader:__init(hdf5_field, obj_id)
     self.data = hdf5_field
     self.hdf5_handler = hdf5_field
     self._in_memory = false
-    local s = hdf5._getObjectName(hdf5_field._datasetID):split('/')
-    self.set = s[1]
-    self.name = s[2]
-    self.size = self.data:dataspaceSize()
+    self.set = self:_get_set_name()
+    self.name = self:_get_field_name()
+    self.size = self:_get_field_size()
     self.shape = get_data_shape(self.size)
     self.type = get_data_type_hdf5(self.data, self.size)
-    self.ids_list = {}
-    for i=1, #self.size do
-        table.insert(self.ids_list, {1, self.size[i]})
-    end
+    self.ids_list = self:_get_ids_list()
     self.ndims = #self.size
     -- fillvalue not implemented in hdf5 lib
     self.obj_id = obj_id
+end
+
+function FieldLoader:_get_set_name()
+    local hdf5_object_str = self:_get_hdf5_object_str()
+    return hdf5_object_str:split('/')[1]
+end
+
+function FieldLoader:_get_field_name()
+    local hdf5_object_str = self:_get_hdf5_object_str()
+    return hdf5_object_str:split('/')[2]
+end
+
+function FieldLoader:_get_hdf5_object_str()
+    return hdf5._getObjectName(self.hdf5_handler._datasetID)
+end
+
+function FieldLoader:_get_field_size()
+    return self.data:dataspaceSize()
+end
+
+function FieldLoader:_get_ids_list()
+    local ids = {}
+    for i=1, #self.size do
+        table.insert(ids, {1, self.size[i]})
+    end
+    return ids
 end
 
 function FieldLoader:get(idx)
