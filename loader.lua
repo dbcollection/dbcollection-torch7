@@ -249,13 +249,24 @@ function DataLoader:size(set_name, field)
 ]]
     local field = field or 'object_ids'
     if set_name then
+        self:_get_set_size(set_name, field)
+    else
+        return self:_get_set_size_all(field)
+    end
+end
+
+function DataLoader:_get_set_size(set_name, field)
         assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
                                     :format(set_name))
+    assert(field, 'Must input a field')
         return self[set_name]:size(field)
-    else
+end
+
+function DataLoader:_get_set_size_all(field)
+    assert(field, 'Must input a field')
         local out = {}
-        for set_name in pairs(self.sets) do
-            out[set_name] = self[set_name]:size(field)
+    for set_name, _ in pairs(self.sets) do
+        out[set_name] = self:_get_set_size(set_name, field)
         end
         return out
     end
