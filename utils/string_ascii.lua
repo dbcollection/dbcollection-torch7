@@ -17,6 +17,16 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
+local function copy_string_to_tensor(str, tensor, size)
+    local s_data = tensor:data()
+    for k, v in ipairs(str) do
+        ffi.copy(s_data, v)
+        s_data = s_data + size
+    end
+end
+
+------------------------------------------------------------------------------------------------------------
+
 --[[ Convert a string to a torch.CharTensor ]]--
 local function convert_str_to_ascii(input)
     assert(input)
@@ -37,14 +47,6 @@ local function convert_str_to_ascii(input)
     -- copy data to the tensor
     copy_string_to_tensor(input, ascii_tensor, maximum_lenght)
     return ascii_tensor
-end
-
-local function copy_string_to_tensor(str, tensor, size)
-    local s_data = tensor:data()
-    for k, v in ipairs(str) do
-        ffi.copy(s_data, v)
-        s_data = s_data + size
-    end
 end
 
 ------------------------------------------------------------------------------------------------------------

@@ -30,6 +30,14 @@ local function is_val_in_table(value, source)
     return false
 end
 
+local function concat_shape_string(source, new_string, is_not_last)
+    local output = source .. new_string
+    if is_not_last then
+        output = output .. ', '
+    end
+    return output
+end
+
 local function get_data_shape(size)
     local shape="("
     for j=1, #size do
@@ -39,26 +47,18 @@ local function get_data_shape(size)
     return shape
 end
 
-local function concat_shape_string(source, new_string, is_not_last)
-    local output = source .. new_string
-    if is_not_last then
-        output = output .. ', '
+local function get_atomic_indexes(dim)
+    local idx = {}
+    for i=1, dim do
+        table.insert(idx, {1,1})
     end
-    return output
+    return idx
 end
 
 local function get_data_type_hdf5(hdf5_dataset, size)
     local idx = get_atomic_indexes(#size)
     local data_sample = hdf5_dataset:partial(unpack(idx))
     return torch.type(data_sample)
-end
-
-local function get_atomic_indexes(dim)
-    local idx = {}
-    for i=1, ndim do
-        table.insert(idx, {1,1})
-    end
-    return idx
 end
 
 ---------------------------------------------------------------------------------------------------
@@ -116,7 +116,7 @@ function DataLoader:__init(name, task, data_dir, hdf5_filepath)
     self.root_path = '/'
 
     self.sets = self:_get_set_names()
-    self.object_fields = self:_get_object_fields_per_set()
+    self.object_fields = self:_get_object_fields()
 
     -- make links for all groups (train/val/test/etc) for easier access
     self:_set_SetLoaders()
@@ -138,7 +138,7 @@ end
 function DataLoader:_get_object_fields()
     local object_fields = {}
     for _, set in pairs(self.sets) do
-        object_fields[k] = self:_get_object_fields_data_from_set(set)
+        object_fields[set] = self:_get_object_fields_data_from_set(set)
     end
     return object_fields
 end
@@ -146,16 +146,16 @@ end
 function DataLoader:_get_object_fields_data_from_set(set)
     local hdf5_dataset_path = self.root_path .. set ..'/object_fields'
     local object_fields_data = self.file:read(hdf5_dataset_path):all()
-    if object_fields:dim() == 1 then
+    if object_fields_data:dim() == 1 then
         object_fields_data = object_fields_data:view(1,-1)
     end
     return string_ascii.convert_ascii_to_str(object_fields_data)
 end
 
 function DataLoader:_set_SetLoaders()
-    for k, _ in pairs(self.sets) do
-        local hdf5_group_path = self.root_path .. k
-        self[k] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path), k)
+    for _, set in pairs(self.sets) do
+        local hdf5_group_path = self.root_path .. set
+        self[set] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path), set)
     end
 end
 
@@ -804,7 +804,7 @@ function SetLoader:_print_fields_info()
         local field_info = self._fields_info[i]
         local s_name = self:_get_field_name_str(i)
         local s_shape = self:_get_field_shape_str(i)
-        local s_obj = self:_fields_info[i]["obj"]
+        local s_obj = self._fields_info[i]["obj"]
         local s_type = self:_get_field_type_str(i, #s_obj > 0)
         print(s_name .. s_shape .. s_type .. s_obj)
     end
@@ -858,7 +858,7 @@ function SetLoader:_get_list_name_str(idx)
     local offset = 8
     local name = self._lists_info[idx]["name"]
     local str_padding = string.rep(' ', self._sizes_info.name_list + offset - #name)
-    return s_name = ('   - %s, '):format(name .. str_padding)
+    return ('   - %s, '):format(name .. str_padding)
 end
 
 function SetLoader:_get_list_shape_str(idx)
