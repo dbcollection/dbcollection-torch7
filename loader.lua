@@ -1151,6 +1151,10 @@ function FieldLoader:to_memory(is_to_memory)
     self:_set_to_memory(is_to_memory)
 end
 
+function FieldLoader:__len__()
+    return self.size
+end
+
 function FieldLoader:__tostring__()
     local str
     if self._in_memory then
@@ -1161,10 +1165,6 @@ function FieldLoader:__tostring__()
               :format(self.name, self.shape, self.type)
     end
     return str
-end
-
-function FieldLoader:__len__()
-    return self.size
 end
 
 function FieldLoader:__index__(idx)
