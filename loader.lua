@@ -112,30 +112,55 @@ function DataLoader:__init(name, task, data_dir, hdf5_filepath)
     self.hdf5_filepath = hdf5_filepath
 
     -- create a handler for the cache file
-    self.file = hdf5.open(self.hdf5_filepath, 'r')
+    self.file = self:_open_hdf5_file()
     self.root_path = '/'
 
-    -- make links for all groups (train/val/test/etc) for easier access
-    self.sets = {}
-    self.object_fields = {}
+    self.sets = self:_get_set_names()
+    self.object_fields = self:_get_object_fields_per_set()
 
     -- make links for all groups (train/val/test/etc) for easier access
-    self.sets = {}
-    self.object_fields = {}
+    self:_set_SetLoaders()
+end
+
+function DataLoader:_open_hdf5_file()
+    return hdf5.open(self.hdf5_filepath, 'r')
+end
+
+function DataLoader:_get_set_names()
+    local sets = {}
     local group_default = self.file:read(self.root_path)
     for k, v in pairs(group_default._children) do
-        -- add set to the table
-        table.insert(self.sets, k)
-
-        self['k'] = dbcollection.SetLoader(self.file:read(self.root_path .. k), k)
-
-        -- fetch list of field names that compose the object list.
-        local object_fields = self.file:read(self.root_path .. k ..'/object_fields'):all()
-        if object_fields:dim() == 1 then
-            object_fields = object_fields:view(1,-1)
-        end
-        self.object_fields[k] = string_ascii.convert_ascii_to_str(object_fields)
+        table.insert(sets, k)
     end
+    return sets
+end
+
+function DataLoader:_get_object_fields()
+    local object_fields = {}
+    for _, set in pairs(self.sets) do
+        object_fields[k] = self:_get_object_fields_data_from_set(set)
+    end
+    return object_fields
+end
+
+function DataLoader:_get_object_fields_data_from_set(set)
+    local hdf5_dataset_path = self.root_path .. set ..'/object_fields'
+    local object_fields_data = self.file:read(hdf5_dataset_path):all()
+        if object_fields:dim() == 1 then
+        object_fields_data = object_fields_data:view(1,-1)
+        end
+    return string_ascii.convert_ascii_to_str(object_fields_data)
+    end
+
+function DataLoader:_set_SetLoaders()
+    for k, _ in pairs(self.sets) do
+        local hdf5_group_path = self.root_path .. k
+        self[k] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path), k)
+end
+end
+
+function DataLoader:_get_hdf5_group(path)
+    return self.file:read(path)
 end
 
 function DataLoader:get(set_name, field, idx)
