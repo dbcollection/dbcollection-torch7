@@ -30,17 +30,21 @@ local function is_val_in_table(value, source)
     return false
 end
 
-local function fetch_data_shape(size)
+local function get_data_shape(size)
     local shape="("
     for j=1, #size do
-        shape = shape .. size[j]
-        if j < #size then
-            shape = shape .. ', '
-        else
-            shape = shape .. ')'
-        end
+        shape = concat_shape_string(shape, size[j], j < #size)
     end
+            shape = shape .. ')'
     return shape
+        end
+
+local function concat_shape_string(source, new_string, is_not_last)
+    local output = source .. new_string
+    if is_not_last then
+        output = output .. ', '
+    end
+    return output
 end
 
 local function fetch_data_type(hdf5_dataset, size)
@@ -566,7 +570,7 @@ function SetLoader:info()
     for i=1, #self.fields do
         local f = self.hdf5_group:getOrCreateChild('field')
         local size = f:dataspaceSize()
-        local shape = fetch_data_shape(size)
+        local shape = get_data_shape(size)
         local dtype = fetch_data_type(f, size)
         if fields:match('list_') then
             table.insert(lists_info, {
@@ -668,7 +672,7 @@ function FieldLoader:__init(hdf5_field, obj_id)
     self.set = s[1]
     self.name = s[2]
     self.size = self.data:dataspaceSize()
-    self.shape = fetch_data_shape(self.size)
+    self.shape = get_data_shape(self.size)
     self.type = fetch_data_type(self.data, self.size)
     self.ids_list = {}
     for i=1, #self.size do
