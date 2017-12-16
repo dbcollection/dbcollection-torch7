@@ -84,6 +84,12 @@ end
 -- Tests
 --------------------------------------------------------------------------------
 
+function test.test_split_string()
+    local str = '/train/data'
+    local split = str:split('/')
+    tester:assert(#split == 2)
+end
+
 function test.test_FieldLoader__init()
     local h5obj = load_dummy_hdf5_file()
     local obj_id = 1
