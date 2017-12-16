@@ -173,50 +173,50 @@ function test.test_DataLoader_init()
 end
 
 function test.test_DataLoader_open_hdf5_file()
-    local loader, utils  = setUp()
-    tester:assert(loader:_open_hdf5_file() ~=  nil)
+    --local loader, utils  = setUp()
+    --tester:assert(loader:_open_hdf5_file() ~=  nil)
 end
 
 function test.test_DataLoader_get_set_names()
-    local loader, utils  = setUp()
-    tester:eq(loader.sets, loader:_get_set_names())
+    --local loader, utils  = setUp()
+    --tester:eq(loader.sets, loader:_get_set_names())
 end
 
 function test.test_DataLoader_get_object_fields()
-    local loader, utils  = setUp()
-    tester:eq(loader.object_fields, loader:_get_object_fields())
+    --local loader, utils  = setUp()
+    --tester:eq(loader.object_fields, loader:_get_object_fields())
 end
 
 function test.test_DataLoader_get()
-    local loader, utils  = setUp()
+    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_object()
-    local loader, utils  = setUp()
+    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_size()
-    local loader, utils  = setUp()
+    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_list()
-    local loader, utils  = setUp()
+    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_object_field_id()
-    local loader, utils  = setUp()
+    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_info()
-    local loader, utils  = setUp()
+    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader__len__()
-    local loader, utils  = setUp()
+    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader__tostring__()
-    local loader, utils  = setUp()
+    --local loader, utils  = setUp()
 end
 
 
