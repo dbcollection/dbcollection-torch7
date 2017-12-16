@@ -158,7 +158,7 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function test.test_init_DataLoader_class()
+function test.test_DataLoader_init()
     local name = 'some_db'
     local task = 'task'
     local data_dir = './some/dir'
