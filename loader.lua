@@ -1116,18 +1116,20 @@ function FieldLoader:object_field_id()
     return self.obj_id
 end
 
-function FieldLoader:info()
+function FieldLoader:info(verbose)
 --[[
     Prints information about the field.
 
     Displays information like name, size and shape of the field.
 ]]
-    if self.obj_id then
-        print(('Field: %s,  shape = %s,  dtype = %s,  (in \'object_ids\', position = %d)')
-              :format(self.name, str(self.shape), str(self.type), self.obj_id))
-    else
-        print(('Field: %s,  shape = %s,  dtype = %s')
-              :format(self.name, str(self.shape), str(self.type)))
+    if verbose ~= false then
+        if self.obj_id then
+            print(('Field: %s,  shape = %s,  dtype = %s,  (in \'object_ids\', position = %d)')
+            :format(self.name, self.shape, self.type, self.obj_id))
+        else
+            print(('Field: %s,  shape = %s,  dtype = %s')
+            :format(self.name, self.shape, self.type))
+        end
     end
 end
 

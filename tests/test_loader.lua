@@ -142,6 +142,11 @@ function test.test_FieldLoader_object_field_id()
 end
 
 function test.test_FieldLoader_info()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:info(false)
+
+    tester:assert(true)
 end
 
 function test.test_FieldLoader_to_memory()
