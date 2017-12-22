@@ -150,6 +150,11 @@ function test.test_FieldLoader_info()
 end
 
 function test.test_FieldLoader_to_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+
+    tester:assert(torch.type(field_loader.data) == torch.type(torch.DoubleTensor()))
 end
 
 function test.test_FieldLoader__len__()
