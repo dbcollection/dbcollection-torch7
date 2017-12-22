@@ -932,11 +932,11 @@ function FieldLoader:__init(hdf5_field, obj_id)
     self._in_memory = false
     self.set = self:_get_set_name()
     self.name = self:_get_field_name()
-    self.size = self:_get_field_size()
-    self.shape = get_data_shape(self.size)
-    self.type = get_data_type_hdf5(self.data, self.size)
+    self._size = self:_get_field_size()
+    self.shape = get_data_shape(self._size)
+    self.type = get_data_type_hdf5(self.data, self._size)
     self.ids_list = self:_get_ids_list()
-    self.ndims = #self.size
+    self.ndims = #self._size
     -- fillvalue not implemented in hdf5 lib
     self.obj_id = obj_id
 end
@@ -963,8 +963,8 @@ end
 
 function FieldLoader:_get_ids_list()
     local ids = {}
-    for i=1, #self.size do
-        table.insert(ids, {1, self.size[i]})
+    for i=1, #self._size do
+        table.insert(ids, {1, self._size[i]})
     end
     return ids
 end
@@ -1098,7 +1098,7 @@ function FieldLoader:size()
     table
         Returns the size of the field.
 ]]
-    return self.size
+    return self._size
 end
 
 function FieldLoader:object_field_id()
@@ -1167,7 +1167,7 @@ function FieldLoader:to_memory(is_to_memory)
 end
 
 function FieldLoader:__len__()
-    return self.size
+    return self._size
 end
 
 function FieldLoader:__tostring__()

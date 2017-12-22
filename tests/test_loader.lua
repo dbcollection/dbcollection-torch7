@@ -126,6 +126,11 @@ function test.test_FieldLoader_get_all_obj()
 end
 
 function test.test_FieldLoader_size()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local size = field_loader:size()
+
+    tester:eq(size, set_data['data']:size():totable(), 'Sizes are not the same')
 end
 
 function test.test_FieldLoader_object_field_id()
