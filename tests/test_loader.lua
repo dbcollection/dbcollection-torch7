@@ -114,7 +114,17 @@ function test.test_FieldLoader_get_single_obj()
     local id = 1
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][1]:view(1, -1))
+    tester:eq(data, set_data['data'][1])
+end
+
+function test.test_FieldLoader_get_single_obj_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local id = 1
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][1])
 end
 
 function test.test_FieldLoader_get_all_obj()
@@ -124,6 +134,16 @@ function test.test_FieldLoader_get_all_obj()
 
     tester:eq(data, set_data['data'])
 end
+
+function test.test_FieldLoader_get_all_obj_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local data = field_loader:get()
+
+    tester:eq(data, set_data['data'])
+end
+
 
 function test.test_FieldLoader_size()
     local field_loader, set_data = load_test_data_FieldLoader('train')
@@ -165,7 +185,7 @@ function test.test_FieldLoader__len__()
     tester:eq(size, set_data['data']:size():totable(), 'Sizes are not the same')
 end
 
-function test.test_FieldLoader__tostring__data_in_disk()
+function test.test_FieldLoader__tostring__()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
     local matching_str = 'FieldLoader: <HDF5File "data": shape (10, 10), type "torch.DoubleTensor">'
@@ -173,7 +193,7 @@ function test.test_FieldLoader__tostring__data_in_disk()
     tester:eq(field_loader:__tostring__(), matching_str, 'Strings do not match')
 end
 
-function test.test_FieldLoader__tostring__data_in_memory()
+function test.test_FieldLoader__tostring__in_memory()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
     field_loader:to_memory(true)
