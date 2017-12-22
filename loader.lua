@@ -1025,7 +1025,7 @@ end
 function FieldLoader:_get_data_hdf5(idx)
     assert(idx)
     local id = self:_get_ids(idx)
-    return self.data:partial(unpack(id))
+    return self.data:partial(unpack(id)):squeeze()
 end
 
 function FieldLoader:_get_ids(idx)
@@ -1047,17 +1047,42 @@ end
 
 function FieldLoader:_get_ids_multiple(idx)
     assert(idx)
-    assert(#idx > self.ndims, ('too many indices provided: got %d, max expected %d')
-                              :format(#idx, self.ndims))
+    if next(idx) then
+        return self:_get_ids_table(idx)
+    else
+        return self.ids_list
+    end
+end
+
+function FieldLoader:_get_ids_table(idx)
+    local type_idx = type(idx[1])
+    if type_idx == 'table' then
+        return self:_get_ids_table_of_tables(idx[1])
+    elseif type_idx == 'number' then
+        return self:_get_ids_table_of_numbers(idx)
+    else
+        error('Invalid index type: ' .. type_idx)
+    end
+end
+
+function FieldLoader:_get_ids_table_of_tables(idx)
+    assert(#idx <= self.ndims, ("too many indices provided: got %s, max expected %s")
+                                  :format(#idx[1], self.ndims))
     local ids = self.ids_list
     for i=1, #idx do
-        if type(idx[i]) == 'number' then
-            ids[i][1] = idx[i]
-            ids[i][2] = idx[i]
-        else
-            ids[i][1] = idx[i][1] or ids[i][1]
-            ids[i][2] = idx[i][2] or ids[i][2]
-        end
+        ids[i][1] = idx[i][1] or ids[i][1]
+        ids[i][2] = idx[i][2] or ids[i][2]
+    end
+    return ids
+end
+
+function FieldLoader:_get_ids_table_of_numbers(idx)
+    assert(#idx <= self.ndims, ("too many indices provided: got %s, max expected %s")
+                               :format(#idx, self.ndims))
+    local ids = self.ids_list
+    for i=1, #idx do
+        ids[i][1] = idx[i]
+        ids[i][2] = idx[i]
     end
     return ids
 end

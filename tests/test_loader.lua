@@ -182,7 +182,59 @@ function test.test_FieldLoader__tostring__data_in_memory()
     tester:eq(field_loader:__tostring__(), matching_str, 'Strings do not match')
 end
 
-function test.test_FieldLoader__index__()
+function test.test_FieldLoader__index__single_obj()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local idx = 1
+    local data = field_loader[idx]
+
+    tester:eq(data, set_data['data'][idx], 'Tensors do not match')
+end
+
+function test.test_FieldLoader__index__single_obj_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local idx = 1
+    local data = field_loader[idx]
+
+    tester:eq(data, set_data['data'][idx], 'Tensors do not match')
+end
+
+function test.test_FieldLoader__index__single_objs_single_value()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local idx = {1,1}
+    local data = field_loader[idx]
+
+    tester:eq(data, set_data['data'][idx], 'Tensors do not match')
+end
+
+function test.test_FieldLoader__index__single_objs_single_value_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local idx = {1,1}
+    local data = field_loader[idx]
+
+    tester:eq(data, set_data['data'][idx], 'Tensors do not match')
+end
+
+function test.test_FieldLoader__index__all_objs()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local data = field_loader[{}]
+
+    tester:eq(data, set_data['data'], 'Tensors do not match')
+end
+
+function test.test_FieldLoader__index__all_objs_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local data = field_loader[{}]
+
+    tester:eq(data, set_data['data'], 'Tensors do not match')
 end
 
 ------------------------------------------------------------------------------------------------------------
