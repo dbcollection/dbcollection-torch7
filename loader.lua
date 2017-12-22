@@ -992,7 +992,8 @@ function FieldLoader:get(idx)
 ]]
     local data = {}
     if idx then
-        assert(type(idx) == 'number' or dtype == 'table', ('Must input a number or table as input: %s.'):format(dtype))
+        local dtype = type(idx)
+        assert(dtype == 'number' or dtype == 'table', ('Must input a number or table as input: %s.'):format(dtype))
         return self:_get_range(idx)
     else
         return self:_get_all()
@@ -1094,7 +1095,7 @@ function FieldLoader:_get_data_multiple_id(idx)
     assert(idx)
     local data
     for i=1, #idx do
-        local sample = self:_get_data_single_id(idx[i])
+        local sample = self:_get_data_single_id(idx[i]):view(1, -1)
         if i > 1 then
             data = data:cat(sample, 1)
         else
