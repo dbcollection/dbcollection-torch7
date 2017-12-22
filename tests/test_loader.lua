@@ -165,7 +165,21 @@ function test.test_FieldLoader__len__()
     tester:eq(size, set_data['data']:size():totable(), 'Sizes are not the same')
 end
 
-function test.test_FieldLoader__tostring__()
+function test.test_FieldLoader__tostring__data_in_disk()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local matching_str = 'FieldLoader: <HDF5File "data": shape (10, 10), type "torch.DoubleTensor">'
+
+    tester:eq(field_loader:__tostring__(), matching_str, 'Strings do not match')
+end
+
+function test.test_FieldLoader__tostring__data_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local matching_str = 'FieldLoader: <torch.*Tensor "data": shape (10, 10), type "torch.DoubleTensor">'
+
+    tester:eq(field_loader:__tostring__(), matching_str, 'Strings do not match')
 end
 
 function test.test_FieldLoader__index__()
