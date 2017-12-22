@@ -4,7 +4,7 @@
     Warning: Requires Torch7 to be installed.
 --]]
 
--- initializations
+
 require 'paths'
 local dbc = require 'dbcollection.env'
 local hdf5 = require 'hdf5'
@@ -21,7 +21,25 @@ local test = torch.TestSuite()
 
 local hdf5_file = paths.concat(paths.home, 'tmp', 'dbcollection', 'dummy.h5')
 
-local function create_dummy_hdf5_file()
+local function generate_dataset()
+    local sets = {
+        train = 10,
+        test = 5
+    }
+
+    local dataset = {}
+    for set, size in pairs(sets) do
+        local field_name = 'data'
+        dataset[set] = {}
+        dataset[set][field_name] = torch.repeatTensor(torch.range(1,10), size, 1)
+        dataset[set]['object_fields'] = str_to_ascii({field_name})
+        dataset[set]['object_ids'] = torch.range(1, size)
+    end
+
+    return dataset
+end
+
+local function create_hdf5_file()
     if paths.filep(hdf5_file) then
         os.execute('rm -rf ' .. hdf5_file)
     end
@@ -29,15 +47,22 @@ local function create_dummy_hdf5_file()
     if not paths.dirp(dirname) then
         os.execute('mkdir -p ' .. dirname)
     end
-    local h5_obj = hdf5.open(hdf5_file, 'w')
-    local object_fields = str_to_ascii({'data'})
-    h5_obj:write('/train/data', torch.repeatTensor(torch.range(1,10), 10, 1))
-    h5_obj:write('/train/object_fields', object_fields)
-    h5_obj:write('/train/object_ids', torch.range(1,10))
-    h5_obj:write('/test/data', torch.repeatTensor(torch.range(1,10), 5, 1))
-    h5_obj:write('/test/object_fields', object_fields)
-    h5_obj:write('/test/object_ids', torch.range(1,5))
+    return hdf5.open(hdf5_file, 'w')
+end
+
+local function populate_hdf5_file(h5_obj, dataset)
+    for set, data in pairs(dataset) do
+        for field, val in pairs(data) do
+            h5_obj:write('/' .. set .. '/' .. field, val)
+        end
+    end
     h5_obj:close()
+end
+
+local function create_dummy_hdf5_file()
+    local h5_obj = create_hdf5_file()
+    local dataset = generate_dataset()
+    populate_hdf5_file(h5_obj, dataset)
 end
 
 create_dummy_hdf5_file()
@@ -49,34 +74,23 @@ local function load_dummy_hdf5_file()
     return hdf5.open(hdf5_file, 'r')
 end
 
+local function load_dummy_hdf5_file_FieldLoader(path)
+    assert(path)
+    local h5obj = load_dummy_hdf5_file()
+    local obj_id = 1
+    local field_loader = dbc.FieldLoader(h5obj:read(path), obj_id)
+    return field_loader, dataset
+end
 
-function setUp()
-    local home_dir = paths.home
-    local name = 'mnist'
-    local task = 'classification'
+local function load_test_data_FieldLoader(set)
+    local set = set or 'train'
+    local path = '/' .. set .. '/data'
+    local field_loader = load_dummy_hdf5_file_FieldLoader(path)
 
-    local data_dir = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'data')
-    local cache_path = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'classification.h5')
+    local dataset = generate_dataset()
+    local set_data = dataset[set]
 
-    --if not paths.filep(cache_path) then
-    --    local db = dbc.load({name=name, task=task, is_test=true})
-    --
-    --    ----------------------------------------
-    --    -- temporary fix.
-    --    -- To be removed when the new dbcollection
-    --    -- Python module version is uploaded to pip.
-    --    if not paths.filep(cache_path) then
-    --        cache_path = paths.concat(home_dir, 'tmp', 'dbcollection', 'mnist', 'detection.h5')
-    --    end
-    --    ----------------------------------------
-    --end
-
-    -- initialize object
-    local loader = dbc.DataLoader(name, task, data_dir, cache_path)
-
-    local utils = dbc.utils
-
-    return loader, utils
+    return field_loader, set_data
 end
 
 
