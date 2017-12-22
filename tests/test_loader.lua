@@ -319,7 +319,7 @@ function test.test_FieldLoader__index__single_obj()
     local idx = 1
     local data = field_loader[idx]
 
-    tester:eq(data, set_data['data'][idx], 'Tensors do not match')
+    tester:eq(data, set_data['data'][idx])
 end
 
 function test.test_FieldLoader__index__single_obj_in_memory()
@@ -329,7 +329,7 @@ function test.test_FieldLoader__index__single_obj_in_memory()
     local idx = 1
     local data = field_loader[idx]
 
-    tester:eq(data, set_data['data'][idx], 'Tensors do not match')
+    tester:eq(data, set_data['data'][idx])
 end
 
 function test.test_FieldLoader__index__single_objs_single_value()
@@ -342,7 +342,7 @@ function test.test_FieldLoader__index__single_objs_single_value()
     print(data)
     print(set_data['data'][idx])
 
-    tester:eq(data, set_data['data'][idx], 'Tensors do not match')
+    tester:eq(data, set_data['data'][idx])
 end
 
 function test.test_FieldLoader__index__single_objs_single_value_in_memory()
@@ -352,7 +352,7 @@ function test.test_FieldLoader__index__single_objs_single_value_in_memory()
     local idx = {1,1}
     local data = field_loader[idx]
 
-    tester:eq(data, set_data['data'][idx], 'Tensors do not match')
+    tester:eq(data, set_data['data'][idx])
 end
 
 function test.test_FieldLoader__index__all_objs()
@@ -360,7 +360,7 @@ function test.test_FieldLoader__index__all_objs()
 
     local data = field_loader[{}]
 
-    tester:eq(data, set_data['data'], 'Tensors do not match')
+    tester:eq(data, set_data['data'])
 end
 
 function test.test_FieldLoader__index__all_objs_in_memory()
@@ -369,7 +369,7 @@ function test.test_FieldLoader__index__all_objs_in_memory()
     field_loader:to_memory(true)
     local data = field_loader[{}]
 
-    tester:eq(data, set_data['data'], 'Tensors do not match')
+    tester:eq(data, set_data['data'])
 end
 
 ------------------------------------------------------------------------------------------------------------
@@ -386,27 +386,58 @@ end
 function test.test_SetLoader_get_data_single_obj()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    local data = set_loader:get('data', 1)
+    local id = 1
+    local data = set_loader:get('data', id)
 
-    tester:eq(data, set_data['data'][1], 'Tensors do not match')
+    tester:eq(data, set_data['data'][id])
 end
 
 function test.test_SetLoader_get_data_single_obj_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
     set_loader.data:to_memory(true)
-    local data = set_loader:get('data', 1)
+    local id = 1
+    local data = set_loader:get('data', id)
 
-    tester:eq(data, set_data['data'][1], 'Tensors do not match')
+    tester:eq(data, set_data['data'][id])
 end
 
-function test.test_SetLoader_get_data_multiple_obj()
+function test.test_SetLoader_get_data_single_value_single_obj()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local id = {1,1}
+    local data = set_loader:get('data', id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_SetLoader_get_data_single_value_single_obj_in_memory()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    set_loader.data:to_memory(true)
+    local id = {1,1}
+    local data = set_loader:get('data', id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_SetLoader_get_data_multiple_objs()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
     local id = {{1,3}}
     local data = set_loader:get('data', id)
 
-    tester:eq(data, set_data['data'][id], 'Tensors do not match')
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_SetLoader_get_data_multiple_objs_in_memory()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    set_loader.data:to_memory(true)
+    local id = {{1,3}}
+    local data = set_loader:get('data', id)
+
+    tester:eq(data, set_data['data'][id])
 end
 
 function test.test_SetLoader_get_data_all_obj()
@@ -414,7 +445,7 @@ function test.test_SetLoader_get_data_all_obj()
 
     local data = set_loader:get('data')
 
-    tester:eq(data, set_data['data'], 'Tensors do not match')
+    tester:eq(data, set_data['data'])
 end
 
 function test.test_SetLoader_get_data_all_obj_in_memory()
@@ -423,7 +454,7 @@ function test.test_SetLoader_get_data_all_obj_in_memory()
     set_loader.data:to_memory(true)
     local data = set_loader:get('data')
 
-    tester:eq(data, set_data['data'], 'Tensors do not match')
+    tester:eq(data, set_data['data'])
 end
 
 function test.test_SetLoader_object()
