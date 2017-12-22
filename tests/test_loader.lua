@@ -93,6 +93,23 @@ local function load_test_data_FieldLoader(set)
     return field_loader, set_data
 end
 
+local function load_dummy_hdf5_file_SetLoader(set)
+    assert(set)
+    local h5obj = load_dummy_hdf5_file()
+    local field_loader = dbc.SetLoader(h5obj:read('/' .. set))
+    return field_loader
+end
+
+local function load_test_data_SetLoader(set)
+    local set = set or 'train'
+    local field_loader = load_dummy_hdf5_file_SetLoader(set)
+
+    local dataset = generate_dataset()
+    local set_data = dataset[set]
+
+    return field_loader, set_data
+end
+
 
 --------------------------------------------------------------------------------
 -- Tests
@@ -268,7 +285,38 @@ function test.test_SetLoader__init()
     tester:eq(setLoader.nelems, 5)
 end
 
-function test.test_SetLoader_get()
+function test.test_SetLoader_get_data_single_obj()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local data = set_loader:get('data', 1)
+
+    tester:eq(data, set_data['data'][1], 'Tensors do not match')
+end
+
+function test.test_SetLoader_get_data_single_obj_in_memory()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    set_loader.data:to_memory(true)
+    local data = set_loader:get('data', 1)
+
+    tester:eq(data, set_data['data'][1], 'Tensors do not match')
+end
+
+function test.test_SetLoader_get_data_all_obj()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local data = set_loader:get('data')
+
+    tester:eq(data, set_data['data'], 'Tensors do not match')
+end
+
+function test.test_SetLoader_get_data_all_obj_in_memory()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    set_loader.data:to_memory(true)
+    local data = set_loader:get('data')
+
+    tester:eq(data, set_data['data'], 'Tensors do not match')
 end
 
 function test.test_SetLoader_object()
