@@ -100,15 +100,29 @@ end
 
 function test.test_FieldLoader__init()
     local h5obj = load_dummy_hdf5_file()
+
     local obj_id = 1
-    local fieldLoader = dbc.FieldLoader(h5obj:read('/train/data'), obj_id)
-    tester:assert(fieldLoader ~= nil)
-    tester:assert(fieldLoader._in_memory ~= nil)
-    tester:eq(fieldLoader.name, 'data', 'Names are note the same')
-    tester:eq(fieldLoader.size, {10, 10}, 'Sizes are not the same')
+    local field_loader = dbc.FieldLoader(h5obj:read('/train/data'), obj_id)
+
+    tester:assert(field_loader._in_memory == false)
+    tester:eq(field_loader.name, 'data', 'Names are note the same')
 end
 
-function test.test_FieldLoader_get()
+function test.test_FieldLoader_get_single_obj()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local id = 1
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][1]:view(1, -1))
+end
+
+function test.test_FieldLoader_get_all_obj()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local data = field_loader:get()
+
+    tester:eq(data, set_data['data'])
 end
 
 function test.test_FieldLoader_size()

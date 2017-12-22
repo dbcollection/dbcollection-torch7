@@ -990,10 +990,9 @@ function FieldLoader:get(idx)
     table
         List of tensors if using a list of indexes.
 ]]
-    assert(idx, 'Must input a number or table as input.')
-    assert(type(idx) == 'number' or dtype == 'table', ('Must input a number or table as input: %s.'):format(dtype))
     local data = {}
     if idx then
+        assert(type(idx) == 'number' or dtype == 'table', ('Must input a number or table as input: %s.'):format(dtype))
         return self:_get_range(idx)
     else
         return self:_get_all()
@@ -1025,7 +1024,7 @@ end
 
 function FieldLoader:_get_data_hdf5(idx)
     assert(idx)
-    local id = self:_get_id(idx)
+    local id = self:_get_ids(idx)
     return self.data:partial(unpack(id))
 end
 
