@@ -338,10 +338,6 @@ function test.test_FieldLoader__index__single_objs_single_value()
     local idx = {1,1}
     local data = field_loader[idx]
 
-    print('\n\n\n\n\n\n')
-    print(data)
-    print(set_data['data'][idx])
-
     tester:eq(data, set_data['data'][idx])
 end
 
@@ -379,7 +375,7 @@ function test.test_SetLoader__init()
     local setLoader = dbc.SetLoader(h5obj:read('/test'))
     tester:assert(setLoader ~= nil)
     tester:eq(setLoader.set, 'test')
-    tester:eq(setLoader._object_fields, 'data')
+    tester:eq(setLoader._object_fields, {'data'})
     tester:eq(setLoader.nelems, 5)
 end
 
@@ -457,7 +453,41 @@ function test.test_SetLoader_get_data_all_obj_in_memory()
     tester:eq(data, set_data['data'])
 end
 
-function test.test_SetLoader_object()
+function test.test_SetLoader_get_data_single_obj_object_ids()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local id = 1
+    local data = set_loader:get('object_ids', id)
+
+    tester:eq(data, set_data['object_ids'][id])
+end
+
+function test.test_SetLoader_get_data_single_obj_object_ids_in_memory()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    set_loader.data:to_memory(true)
+    local id = 1
+    local data = set_loader:get('object_ids', id)
+
+    tester:eq(data, set_data['object_ids'][id])
+end
+
+function test.test_SetLoader_object_single_obj()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local id = 1
+    local data = set_loader:object(id)
+
+    tester:eq(data, set_data['object_ids'][id])
+end
+
+function test.test_SetLoader_object_single_obj_value()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local id = 1
+    local data = set_loader:object(id, true)
+
+    tester:eq(data, {set_data['data'][id]})
 end
 
 function test.test_SetLoader_size()

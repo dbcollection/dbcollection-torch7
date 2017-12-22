@@ -452,7 +452,11 @@ end
 
 function SetLoader:_get_object_fields_data()
     local object_fields_data = self:_get_hdf5_dataset_data('object_fields')
-    return string_ascii.convert_ascii_to_str(object_fields_data)
+    local output = string_ascii.convert_ascii_to_str(object_fields_data)
+    if type(output) == 'string' then
+        output = {output}
+    end
+    return output
 end
 
 function SetLoader:_get_hdf5_dataset_data(name)
@@ -535,7 +539,7 @@ function SetLoader:object(idx, convert_to_value)
 ]]
     local indexes = self:_get_object_indexes(idx)
     if convert_to_value then
-        indexes = self._convert(indexes)
+        indexes = self:_convert(indexes)
     end
     return indexes
 end
@@ -584,16 +588,21 @@ function SetLoader:_convert(idx)
         str/int/table
             Value/list of a field from the metadata cache file.
     ]]
+    assert(idx)
     local indexes = self:_convert_to_table_of_tables(idx)
     local object_fields = self:_convert_fields_idx_to_val(indexes)
     return self:_convert_fields_output(object_fields)
 end
 
 function SetLoader:_convert_to_table_of_tables(idx)
-    if type(idx[1]) == 'number' then
-        return {idx}
+    if type(idx) == 'number' then
+        return {{idx}}
     else
-        return idx
+        if type(idx[1]) == 'number' then
+            return {idx}
+        else
+            return idx
+        end
     end
 end
 
@@ -603,11 +612,12 @@ function SetLoader:_convert_fields_idx_to_val(indexes)
         local data = self:_get_object_fields_data_from_idx(indexes[i])
         table.insert(output, data)
     end
+    return output
 end
 
 function SetLoader:_get_object_fields_data_from_idx(indexes)
     local data = {}
-    for k, field in ipairs(self.object_fields) do
+    for k, field in ipairs(self._object_fields) do
         if indexes[k] > 0 then
             table.insert(data, self:get(field, indexes[k]))
         else
@@ -619,9 +629,9 @@ end
 
 function SetLoader:_convert_fields_output(object_fields_values)
     if #object_fields_values > 1 then
-        return object_fields
+        return object_fields_values
     else
-        return object_fields[1]
+        return object_fields_values[1]
     end
 end
 
