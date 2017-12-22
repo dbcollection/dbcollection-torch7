@@ -10,6 +10,20 @@ local DataLoader = torch.class('dbcollection.DataLoader', dbcollection)
 local SetLoader = torch.class('dbcollection.SetLoader', dbcollection)
 local FieldLoader = torch.class('dbcollection.FieldLoader', dbcollection)
 
+
+local function mysplit(inputstr, sep)
+    if sep == nil then
+            sep = "%s"
+    end
+    local t={} ; i=1
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+            t[i] = str
+            i = i + 1
+    end
+    return t
+end
+
+
 ---------------------------------------------------------------------------------------------------
 
 local function get_value_id_in_list(val, list)
@@ -426,7 +440,7 @@ function SetLoader:_get_set_name()
     print(str)
     print('***************\n\n\n\n\n')
     assert(str, 'No string exists!')
-    local str_split = str:split('/')
+    local str_split = mysplit(str, '/') --str:split('/')
     return str_split[1]
 end
 
@@ -932,12 +946,14 @@ end
 
 function FieldLoader:_get_set_name()
     local hdf5_object_str = self:_get_hdf5_object_str()
-    return hdf5_object_str:split('/')[1]
+    local str_split = mysplit(hdf5_object_str, '/')[1]
+    return str_split[1] -- hdf5_object_str:split('/')[1]
 end
 
 function FieldLoader:_get_field_name()
     local hdf5_object_str = self:_get_hdf5_object_str()
-    return hdf5_object_str:split('/')[2]
+    local str_split = mysplit(hdf5_object_str, '/')
+    return str_split[2] -- hdf5_object_str:split('/')[2]
 end
 
 function FieldLoader:_get_hdf5_object_str()
