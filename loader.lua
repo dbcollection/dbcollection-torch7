@@ -1003,14 +1003,6 @@ end
 
 function FieldLoader:_get_range(idx)
     assert(idx)
-    if type(idx) == 'number' then
-        return self:_get_data_single_id(idx)
-    else
-        return self:_get_data_multiple_id(idx)
-    end
-end
-
-function FieldLoader:_get_data_single_id(idx)
     if self._in_memory then
         return self:_get_data_memory(idx)
     else
@@ -1056,53 +1048,20 @@ function FieldLoader:_get_ids_multiple(idx)
 end
 
 function FieldLoader:_get_ids_table(idx)
-    local type_idx = type(idx[1])
-    if type_idx == 'table' then
-        return self:_get_ids_table_of_tables(idx[1])
-    elseif type_idx == 'number' then
-        return self:_get_ids_table_of_numbers(idx)
-    else
-        error('Invalid index type: ' .. type_idx)
-    end
-end
-
-function FieldLoader:_get_ids_table_of_tables(idx)
-    assert(#idx <= self.ndims, ("too many indices provided: got %s, max expected %s")
-                                  :format(#idx[1], self.ndims))
     local ids = self.ids_list
     for i=1, #idx do
-        ids[i][1] = idx[i][1] or ids[i][1]
-        ids[i][2] = idx[i][2] or ids[i][2]
-    end
-    return ids
-end
-
-function FieldLoader:_get_ids_table_of_numbers(idx)
-    assert(#idx <= self.ndims, ("too many indices provided: got %s, max expected %s")
-                               :format(#idx, self.ndims))
-    local ids = self.ids_list
-    for i=1, #idx do
-        ids[i][1] = idx[i]
-        ids[i][2] = idx[i]
-    end
-    return ids
-end
-
-function FieldLoader:_get_data_multiple_id(idx)
---[[
-    Returns a single tensor where the first dim rows corresponds to the indexes.
-]]
-    assert(idx)
-    local data
-    for i=1, #idx do
-        local sample = self:_get_data_single_id(idx[i]):view(1, -1)
-        if i > 1 then
-            data = data:cat(sample, 1)
+        local dtype = type(idx[i])
+        if dtype == 'table' then
+            ids[i][1] = idx[i][1] or ids[i][1]
+            ids[i][2] = idx[i][2] or ids[i][2]
+        elseif dtype == 'number' then
+            ids[i][1] = idx[i]
+            ids[i][2] = idx[i]
         else
-            data = sample
+            error('Invalid index type: ' .. dtype)
         end
     end
-    return data
+    return ids
 end
 
 function FieldLoader:_get_all()
