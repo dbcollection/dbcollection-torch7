@@ -161,7 +161,6 @@ function test.test_FieldLoader_get_all_obj_in_memory()
     tester:eq(data, set_data['data'])
 end
 
-
 function test.test_FieldLoader_size()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
