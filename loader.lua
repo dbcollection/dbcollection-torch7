@@ -11,20 +11,21 @@ local SetLoader = torch.class('dbcollection.SetLoader', dbcollection)
 local FieldLoader = torch.class('dbcollection.FieldLoader', dbcollection)
 
 
-local function mysplit(inputstr, sep)
+---------------------------------------------------------------------------------------------------
+
+--[[ Split a string w.r.t. a single or a sequence of characters ]]
+local function split_str(inputstr, sep)
     if sep == nil then
-            sep = "%s"
+        sep = "%s"
     end
-    local t={} ; i=1
+    local t={}
+    local i=1
     for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
-            t[i] = str
-            i = i + 1
+        t[i] = str
+        i = i + 1
     end
     return t
 end
-
-
----------------------------------------------------------------------------------------------------
 
 local function get_value_id_in_list(val, list)
     for i=1, #list do
@@ -435,13 +436,9 @@ function SetLoader:__init(hdf5_group)
 end
 
 function SetLoader:_get_set_name()
-    local str = hdf5._getObjectName(self.hdf5_group._groupID)
-    print('\n\n\n\n\n***************')
-    print(str)
-    print('***************\n\n\n\n\n')
-    assert(str, 'No string exists!')
-    local str_split = mysplit(str, '/') --str:split('/')
-    return str_split[1]
+    local hdf5_object_str = hdf5._getObjectName(self.hdf5_group._groupID)
+    local str = split_str(hdf5_object_str, '/')
+    return str[1]
 end
 
 function SetLoader:_get_fields()
@@ -946,14 +943,14 @@ end
 
 function FieldLoader:_get_set_name()
     local hdf5_object_str = self:_get_hdf5_object_str()
-    local str_split = mysplit(hdf5_object_str, '/')[1]
-    return str_split[1] -- hdf5_object_str:split('/')[1]
+    local str = split_str(hdf5_object_str, '/')
+    return str[1]
 end
 
 function FieldLoader:_get_field_name()
     local hdf5_object_str = self:_get_hdf5_object_str()
-    local str_split = mysplit(hdf5_object_str, '/')
-    return str_split[2] -- hdf5_object_str:split('/')[2]
+    local str = split_str(hdf5_object_str, '/')
+    return str[2]
 end
 
 function FieldLoader:_get_hdf5_object_str()
