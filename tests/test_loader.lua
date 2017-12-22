@@ -134,6 +134,11 @@ function test.test_FieldLoader_size()
 end
 
 function test.test_FieldLoader_object_field_id()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local obj_id = field_loader:object_field_id()
+
+    tester:eq(obj_id, 1, 'Object ids are not the same')
 end
 
 function test.test_FieldLoader_info()
