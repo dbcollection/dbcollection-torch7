@@ -158,6 +158,11 @@ function test.test_FieldLoader_to_memory()
 end
 
 function test.test_FieldLoader__len__()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local size = #field_loader
+
+    tester:eq(size, set_data['data']:size():totable(), 'Sizes are not the same')
 end
 
 function test.test_FieldLoader__tostring__()
