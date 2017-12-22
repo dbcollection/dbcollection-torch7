@@ -144,42 +144,99 @@ function test.test_FieldLoader_get_single_obj_in_memory()
     tester:eq(data, set_data['data'][id])
 end
 
+function test.test_FieldLoader_get_single_value()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local id = {1, 1}
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_FieldLoader_get_single_value_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local id = {1, 1}
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_FieldLoader_get_two_obj()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local id = {{1, 2}}
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_FieldLoader_get_two_obj_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local id = {{1, 2}}
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_FieldLoader_get_single_value_two_objs()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local id = {{1, 2}, 1}
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_FieldLoader_get_single_value_two_objs_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local id = {{1, 2}, 1}
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_FieldLoader_get_two_values_two_objs()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    local id = {{1, 2}, {1, 2}}
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
+function test.test_FieldLoader_get_two_values_two_objs_in_memory()
+    local field_loader, set_data = load_test_data_FieldLoader('train')
+
+    field_loader:to_memory(true)
+    local id = {{1, 2}, {1, 2}}
+    local data = field_loader:get(id)
+
+    tester:eq(data, set_data['data'][id])
+end
+
 function test.test_FieldLoader_get_multiple_obj()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
-    local id = {1,2}
+    local id = {{1, 2, 3, 4}}
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][{id}])
+    tester:eq(data, set_data['data'][id])
 end
 
 function test.test_FieldLoader_get_multiple_obj_in_memory()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
     field_loader:to_memory(true)
-    local id = {1,2}
+    local id = {{1, 2, 3, 4}}
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][{id}])
-end
-
-function test.test_FieldLoader_get_multiple_obj()
-    local field_loader, set_data = load_test_data_FieldLoader('train')
-
-    local id = {1,2,3,4}
-    local data = field_loader:get(id)
-
-    tester:eq(data, set_data['data'][{id}])
-end
-
-function test.test_FieldLoader_get_multiple_obj_in_memory()
-    local field_loader, set_data = load_test_data_FieldLoader('train')
-
-    field_loader:to_memory(true)
-    local id = {1,2,3,4}
-    local data = field_loader:get(id)
-
-    tester:eq(data, set_data['data'][{id}])
+    tester:eq(data, set_data['data'][id])
 end
 
 function test.test_FieldLoader_get_all_obj()
@@ -281,6 +338,10 @@ function test.test_FieldLoader__index__single_objs_single_value()
     local idx = {1,1}
     local data = field_loader[idx]
 
+    print('\n\n\n\n\n\n')
+    print(data)
+    print(set_data['data'][idx])
+
     tester:eq(data, set_data['data'][idx], 'Tensors do not match')
 end
 
@@ -337,6 +398,15 @@ function test.test_SetLoader_get_data_single_obj_in_memory()
     local data = set_loader:get('data', 1)
 
     tester:eq(data, set_data['data'][1], 'Tensors do not match')
+end
+
+function test.test_SetLoader_get_data_multiple_obj()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local id = {{1,3}}
+    local data = set_loader:get('data', id)
+
+    tester:eq(data, set_data['data'][id], 'Tensors do not match')
 end
 
 function test.test_SetLoader_get_data_all_obj()
