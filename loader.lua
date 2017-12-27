@@ -1089,8 +1089,10 @@ function FieldLoader:_get_all()
     end
 end
 
-function FieldLoader:size()
---[[
+function FieldLoader:size(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
     Size of the field.
 
     Returns the number of the elements of the field.
@@ -1100,11 +1102,17 @@ function FieldLoader:size()
     table
         Returns the size of the field.
 ]]
+    }
+
+    local args = initcheck(...)
+
     return self._size
 end
 
-function FieldLoader:object_field_id()
---[[
+function FieldLoader:object_field_id(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
     Retrieves the index position of the field in the 'object_ids' list.
 
     This method returns the position of the field in the 'object_ids' object.
@@ -1112,9 +1120,13 @@ function FieldLoader:object_field_id()
 
     Returns
     -------
-    int
+            number
         Index of the field in the 'object_ids' list.
 ]]
+    }
+
+    local args = initcheck(...)
+
     return self.obj_id
 end
 
