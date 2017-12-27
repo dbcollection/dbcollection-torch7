@@ -2,6 +2,8 @@
     Dataset's metadata loader classes.
 --]]
 
+local argcheck = require 'argcheck'
+
 local hdf5 = require 'hdf5'
 local dbcollection = require 'dbcollection.env'
 local string_ascii = require 'dbcollection.utils.string_ascii'
@@ -33,7 +35,7 @@ local function get_value_id_in_list(val, list)
             return i
         end
     end
-    return {}
+    return nil
 end
 
 local function is_val_in_table(value, source)
@@ -79,42 +81,39 @@ end
 ---------------------------------------------------------------------------------------------------
 
 function DataLoader:__init(name, task, data_dir, hdf5_filepath)
---[[
-    Dataset metadata loader class.
-
-    This class contains several methods to fetch data from a hdf5 file
-    by using simple, easy to use functions for (meta)data handling.
-
-    Parameters
-    ----------
-    name : str
-        Name of the dataset.
-    task : str
-        Name of the task.
-    data_dir : str
-        Path of the dataset's data directory on disk.
-    hdf5_filepath : str
-        Path of the metadata cache file stored on disk.
-
-    Attributes
-    ----------
-    db_name : str
-        Name of the dataset.
-    task : str
-        Name of the task.
-    data_dir : str
-        Path of the dataset's data directory on disk.
-    hdf5_filepath : str
-        Path of the hdf5 metadata file stored on disk.
-    hdf5_file : h5py._hl.files.File
-        hdf5 file object handler.
-    root_path : str
-        Default data group of the hdf5 file.
-    sets : tuple
-        List of names of set splits (e.g. train, test, val, etc.)
-    object_fields : dict
-        Data field names for each set split.
-]]
+    --[[
+        Dataset metadata loader class.
+        This class contains several methods to fetch data from a hdf5 file
+        by using simple, easy to use functions for (meta)data handling.
+        Parameters
+        ----------
+        name : str
+            Name of the dataset.
+        task : str
+            Name of the task.
+        data_dir : str
+            Path of the dataset's data directory on disk.
+        hdf5_filepath : str
+            Path of the metadata cache file stored on disk.
+        Attributes
+        ----------
+        db_name : str
+            Name of the dataset.
+        task : str
+            Name of the task.
+        data_dir : str
+            Path of the dataset's data directory on disk.
+        hdf5_filepath : str
+            Path of the hdf5 metadata file stored on disk.
+        hdf5_file : h5py._hl.files.File
+            hdf5 file object handler.
+        root_path : str
+            Default data group of the hdf5 file.
+        sets : tuple
+            List of names of set splits (e.g. train, test, val, etc.)
+        object_fields : dict
+            Data field names for each set split.
+    ]]
     assert(name, ('Must input a valid dataset name: %s'):format(name))
     assert(task, ('Must input a valid task name: %s'):format(task))
     assert(data_dir, ('Must input a valid path for the data directory: %s'):format(data_dir))
@@ -887,39 +886,52 @@ end
 
 ---------------------------------------------------------------------------------------------------
 
-function FieldLoader:__init(hdf5_field, obj_id)
---[[
-    Field metadata loader class.
+function FieldLoader:__init(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Field metadata loader class.
 
-    This class contains several methods to fetch data from a specific
-    field of a set (group) in a hdf5 file. It contains useful information
-    about the field and also several methods to fetch data.
+            This class contains several methods to fetch data from a specific
+            field of a set (group) in a hdf5 file. It contains useful information
+            about the field and also several methods to fetch data.
 
-    Parameters
-    ----------
-    hdf5_field : h5py._hl.dataset.Dataset
-        hdf5 field object handler.
+            Parameters
+            ----------
+            hdf5_field : hdf5.HDF5DataSet
+                hdf5 field object handler.
+            obj_id : number
+                Position of the field in 'object_fields'.
 
-    Attributes
-    ----------
-    data : h5py._hl.dataset.Dataset
-        hdf5 group object handler.
-    set : str
-        Name of the set.
-    name : str
-        Name of the field.
-    type : type
-        Type of the field's data.
-    shape : tuple
-        Shape of the field's data.
-    fillvalue : int
-        Value used to pad arrays when storing the data in the hdf5 file.
-    obj_id : int
-        Identifier of the field if contained in the 'object_ids' list.
-]]
-    assert(hdf5_field, 'Must input a valid hdf5 dataset.')
-    self.data = hdf5_field
-    self.hdf5_handler = hdf5_field
+            Attributes
+            ----------
+            data : hdf5.HDF5DataSet
+                hdf5 group object handler.
+            set : str
+                Name of the set.
+            name : str
+                Name of the field.
+            type : type
+                Type of the field's data.
+            shape : tuple
+                Shape of the field's data.
+            fillvalue : int
+                Value used to pad arrays when storing the data in the hdf5 file.
+            obj_id : int
+                Identifier of the field if contained in the 'object_ids' list.
+        ]],
+        {name="hdf5_field", type="hdf5.HDF5DataSet",
+         help="hdf5 field object handler."},
+        {name="obj_id", type="number",
+         help="Position of the field in 'object_fields'.",
+         opt = true}
+    }
+
+    -- parse options
+    local args = initcheck(...)
+
+    self.data = args.hdf5_field
+    self.hdf5_handler = args.hdf5_field
     self._in_memory = false
     self.set = self:_get_set_name()
     self.name = self:_get_field_name()
@@ -929,7 +941,7 @@ function FieldLoader:__init(hdf5_field, obj_id)
     self.ids_list = self:_get_ids_list()
     self.ndims = #self._size
     -- fillvalue not implemented in hdf5 lib
-    self.obj_id = obj_id
+    self.obj_id = args.obj_id
 end
 
 function FieldLoader:_get_set_name()
@@ -960,44 +972,55 @@ function FieldLoader:_get_ids_list()
     return ids
 end
 
-function FieldLoader:get(idx)
---[[
-    Retrieves data of the field from the dataset's hdf5 metadata file.
+function FieldLoader:get(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Retrieves data of the field from the dataset's hdf5 metadata file.
 
-    This method retrieves the i'th data from the hdf5 file. Also, it is
-    possible to retrieve multiple values by inserting a list/tuple of
-    number values as indexes.
+            This method retrieves the i'th data from the hdf5 file. Also, it is
+            possible to retrieve multiple values by inserting a list/tuple of
+            number values as indexes.
 
-    Parameters
-    ----------
-    idx : number/table, optional
-        Index number of he field. If it is a list, returns the data
-        for all the value indexes of that list.
+            Parameters
+            ----------
+            index : number/table, optional
+                Index number of the field. If it is a list, returns the data
+                for all the value indexes of that list.
 
-    Returns
-    -------
-    torch.*Tensor
-        Array containing the field's data.
-]]
-    if idx then
-        return self:_get_by_index(idx)
+            Returns
+            -------
+            torch.*Tensor
+                Array containing the field's data.
+        ]],
+        {name="index", type="table", default={},
+         help="Index number of the field. If it is a list, returns the data " ..
+              "for all the value indexes of that list.",
+         opt=true}
+    }
+
+    -- Workaround to manage have multiple types for the same input.
+    -- First the input checks if it is a number. If the input arg
+    -- is not a number, do a second argument parsing to check if the
+    -- second type matches the input argument.
+    local initcheck_ = argcheck{
+        quiet=true,
+        pack=true,
+        {name="index", type="number"}
+    }
+
+    local status, args = initcheck_(...)
+
+    if status then
+        return self:_get_range({{args.index, args.index}})
     else
-        return self:_get_all()
-    end
-end
+        local args = initcheck(...)
 
-function FieldLoader:_get_by_index(idx)
-    local dtype = type(idx)
-    if dtype == 'number' then
-        return self:_get_range({{idx, idx}})
-    elseif dtype == 'table' then
-        if next(idx) then
-            return self:_get_range({idx})
+        if next(args.index) then
+            return self:_get_range({args.index})
         else
             return self:_get_all()
         end
-    else
-        error(('Must input a number or table as input: %s.'):format(dtype))
     end
 end
 
@@ -1095,13 +1118,27 @@ function FieldLoader:object_field_id()
     return self.obj_id
 end
 
-function FieldLoader:info(verbose)
---[[
-    Prints information about the field.
+function FieldLoader:info(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Prints information about the field.
 
-    Displays information like name, size and shape of the field.
-]]
-    if verbose ~= false then
+            Displays information like name, size and shape of the field.
+
+            Parameters
+            ----------
+            verbose : bool, optional
+                If true, display extra information about the field.
+        ]],
+        {name="verbose", type="boolean", default=true,
+         help="Name of the dataset.",
+         opt=true}
+    }
+
+    local args = initcheck(...)
+
+    if args.verbose then
         if self.obj_id then
             print(('Field: %s,  shape = %s,  dtype = %s,  (in \'object_ids\', position = %d)')
             :format(self.name, self.shape, self.type, self.obj_id))
@@ -1129,22 +1166,33 @@ function FieldLoader:_set_to_memory(is_in_memory)
     self._in_memory = is_in_memory
 end
 
-function FieldLoader:to_memory(is_to_memory)
---[[
-    Modifies how data is accessed and stored.
+function FieldLoader:to_memory(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Modifies how data is accessed and stored.
 
-    Accessing data from a field can be done in two ways: memory or disk.
-    To enable data allocation and access from memory requires the user to
-    specify a boolean. If set to True, data is allocated to a numpy ndarray
-    and all accesses are done in memory. Otherwise, data is kept in disk and
-    accesses are done using the HDF5 object handler.
+            Accessing data from a field can be done in two ways: memory or disk.
+            To enable data allocation and access from memory requires the user to
+            specify a boolean. If set to True, data is allocated to a numpy ndarray
+            and all accesses are done in memory. Otherwise, data is kept in disk and
+            accesses are done using the HDF5 object handler.
 
-    Parameters
-    ----------
-    is_to_memory : bool
-        Move the data to memory (if True).
-]]
-    self:_set_to_memory(is_to_memory)
+            Parameters
+            ----------
+            in_memory : bool
+                Move the data to memory (if true).
+                Otherwise, move to disk (hdf5).
+        ]],
+        {name="in_memory", type="boolean", default=true,
+         help="Move the data to memory (if True). Otherwise, move to disk (hdf5).",
+         opt = true}
+    }
+
+    -- parse options
+    local args = initcheck(...)
+
+    self:_set_to_memory(args.in_memory)
 end
 
 function FieldLoader:__len__()
