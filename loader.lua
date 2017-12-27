@@ -1033,7 +1033,7 @@ function FieldLoader:_get_data_memory(idx)
     assert(idx)
     local data = self.data[idx]
     if type(data) ~= 'number' then
-        data = data:squeeze()
+        data = data:squeeze(1)
     end
     return data
 end

@@ -452,6 +452,24 @@ function test.test_SetLoader_object_single_obj_value()
     tester:eq(data, {set_data['data'][id]})
 end
 
+function test.test_SetLoader_object_two_objs()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local id = {1,2}
+    local data = set_loader:object(id)
+
+    tester:eq(data, set_data['object_ids'][{id}])
+end
+
+function test.test_SetLoader_object_two_objs_value()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local id = 1
+    local data = set_loader:object(id, true)
+
+    tester:eq(data, {set_data['data'][id]})
+end
+
 function test.test_SetLoader_size()
 end
 
