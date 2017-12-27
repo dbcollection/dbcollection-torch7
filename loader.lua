@@ -190,95 +190,163 @@ function DataLoader:_get_hdf5_group(path)
     return self.file:read(path)
 end
 
-function DataLoader:get(set_name, field, idx)
---[[
-    Retrieves data from the dataset's hdf5 metadata file.
+function DataLoader:get(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Retrieves data from the dataset's hdf5 metadata file.
 
-    This method retrieves the i'th data from the hdf5 file with the
-    same 'field' name. Also, it is possible to retrieve multiple values
-    by inserting a list/tuple of number values as indexes.
+            This method retrieves the i'th data from the hdf5 file with the
+            same 'field' name. Also, it is possible to retrieve multiple values
+            by inserting a list/tuple of number values as indexes.
 
-    Parameters
-    ----------
-    set_name : str
-        Name of the set.
-    field : str
-        Field name.
-    idx : int/list/tuple, optional
-        Index number of the field. If it is a list, returns the data
-        for all the value indexes of that list.
+            Parameters
+            ----------
+            set_name : str
+                Name of the set.
+            field : str
+                Name of the field.
+            index : number/table, optional
+                Index number of the field. If it is a list, returns the data
+                for all the value indexes of that list.
 
-    Returns
-    -------
-    np.ndarray
-        Numpy array containing the field's data.
-    list
-        List of numpy arrays if using a list of indexes.
-]]
-    assert(set_name, ('Must input a valid set name: %s'):format(set_name))
-    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                :format(set_name))
-    assert(field, ('Must input a valid field name: %s'):format(field))
+            Returns
+            -------
+            torch.*Tensor
+                Numpy array containing the field's data.
+        ]],
+        {name="set_name", type="string",
+         help="Name of the set."},
+        {name="field", type="string",
+         help="Name of the field."},
+        {name="index", type="table", default={},
+         help="Index number of the field. If it is a list, returns the data " ..
+              "for all the value indexes of that list.",
+         opt = true}
+    }
+
+    -- Workaround to manage have multiple types for the same input.
+    -- First the input checks if it is a number. If the input arg
+    -- is not a number, do a second argument parsing to check if the
+    -- second type matches the input argument.
+    local initcheck_ = argcheck{
+        quiet=true,
+        pack=true,
+        {name="set_name", type="string"},
+        {name="field", type="string"},
+        {name="index", type="number"}
+    }
+
+    local status, args = initcheck_(...)
+
+    if not status then
+        args = initcheck(...)
+    end
+
+    assert(self.sets[args.set_name], ('Set %s does not exist for this dataset.')
+                                     :format(args.set_name))
     return self[set_name]:get(field, idx)
 end
 
-function DataLoader:object(set_name, idx, convert_to_value)
---[[
-    Retrieves a list of all fields' indexes/values of an object composition.
+function DataLoader:object(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Retrieves a list of all fields' indexes/values of an object composition.
 
-    Retrieves the data's ids or contents of all fields of an object.
+            Retrieves the data's ids or contents of all fields of an object.
 
-    It basically works as calling the get() method for each individual field
-    and then groups all values into a list w.r.t. the corresponding order of
-    the fields.
+            It basically works as calling the get() method for each individual field
+            and then groups all values into a list w.r.t. the corresponding order of
+            the fields.
 
-    Parameters
-    ----------
-    set_name : str
-        Name of the set.
-    idx : int/list/tuple, optional
-        Index number of the field. If it is a list, returns the data
-        for all the value indexes of that list. If no index is used,
-        it returns the entire data field array.
-    convert_to_value : bool, optional
-        If False, outputs a list of indexes. If True,
-        it outputs a list of arrays/values instead of indexes.
+            Parameters
+            ----------
+            set_name : str
+                Name of the set.
+            index : number/table, optional
+                Index number of the field. If it is a list, returns the data
+                for all the value indexes of that list. If no index is used,
+                it returns the entire data field array.
+            convert_to_value : bool, optional
+                If False, outputs a list of indexes. If True,
+                it outputs a list of arrays/values instead of indexes.
 
-    Returns
-    -------
-    list
-        Returns a list of indexes or, if convert_to_value is True,
-        a list of data arrays/values.
-]]
-    assert(set_name, ('Must input a valid set name: %s'):format(set_name))
-    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                :format(set_name))
-    return self[set_name]:object(idx, convert_to_value or false)
+            Returns
+            -------
+            table
+                Returns a list of indexes or, if convert_to_value is True,
+                a list of data arrays/values.
+        ]],
+        {name="set_name", type="string",
+         help="Name of the set."},
+        {name="index", type="table", default={},
+         help="Index number of the field. If it is a list, returns the data " ..
+              "for all the value indexes of that list.",
+         opt=true},
+        {name="convert_to_value", type="boolean", default=false,
+         help="If False, outputs a list of indexes. If True, " ..
+              "it outputs a list of arrays/values instead of indexes.",
+         opt=true}
+    }
+
+    -- Workaround to manage have multiple types for the same input.
+    -- First the input checks if it is a number. If the input arg
+    -- is not a number, do a second argument parsing to check if the
+    -- second type matches the input argument.
+    local initcheck_ = argcheck{
+        quiet=true,
+        pack=true,
+        {name="set_name", type="string"},
+        {name="index", type="number"},
+        {name="convert_to_value", type="boolean", default=false, opt=true}
+    }
+
+    local status, args = initcheck_(...)
+
+    if not status then
+        args = initcheck(...)
+    end
+
+    assert(self.sets[args.set_name], ('Set %s does not exist for this dataset.')
+                                     :format(args.set_name))
+    return self[args.set_name]:object(args.index, args.convert_to_value)
 end
 
-function DataLoader:size(set_name, field)
---[[
-    Size of a field.
+function DataLoader:size(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Size of a field.
 
-    Returns the number of the elements of a field.
+            Returns the number of the elements of a field.
 
-    Parameters
-    ----------
-    set_name : str, optional
-        Name of the set.
-    field : str, optional
-        Name of the field in the metadata file.
+            Parameters
+            ----------
+            set_name : str, optional
+                Name of the set.
+            field : str, optional
+                Name of the field in the metadata file.
 
-    Returns
-    -------
-    list
-        Returns the size of a field.
-]]
-    local field = field or 'object_ids'
-    if set_name then
-        self:_get_set_size(set_name, field)
+            Returns
+            -------
+            table
+                Returns the size of a field.
+        ]],
+        {name="set_name", type="string",
+         help="Name of the set.",
+         opt=true},
+        {name="field", type="string", default='object_ids',
+         help="Name of the field in the metadata file.",
+         opt = true}
+    }
+
+    local args = initcheck(...)
+
+    if args.set_name then
+        self:_get_set_size(args.set_name, args.field)
     else
-        return self:_get_set_size_all(field)
+        return self:_get_set_size_all(args.field)
     end
 end
 
@@ -298,22 +366,31 @@ function DataLoader:_get_set_size_all(field)
     return out
 end
 
-function DataLoader:list(set_name)
---[[
-    List of all field names of a set.
+function DataLoader:list(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            List of all field names of a set.
 
-    Parameters
-    ----------
-    set_name : str, optional
-        Name of the set.
+            Parameters
+            ----------
+            set_name : str, optional
+                Name of the set.
 
-    Returns
-    -------
-    list
-        List of all data fields of the dataset.
-]]
-    if set_name then
-        return self:_get_set_list(set_name)
+            Returns
+            -------
+            table
+                List of all data fields of the dataset.
+        ]],
+        {name="set_name", type="string",
+         help="Name of the set.",
+         opt=true}
+    }
+
+    local args = initcheck(...)
+
+    if args.set_name then
+        return self:_get_set_list(args.set_name)
     else
         return self:_get_set_list_all()
     end
@@ -333,55 +410,72 @@ function DataLoader:_get_set_list_all()
     return out
 end
 
-function DataLoader:object_field_id(set_name, field)
---[[
-    Retrieves the index position of a field in the 'object_ids' list.
+function DataLoader:object_field_id(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Retrieves the index position of a field in the 'object_ids' list.
 
-    This method returns the position of a field in the 'object_ids' object.
-    If the field is not contained in this object, it returns a null value.
+            This method returns the position of a field in the 'object_ids' object.
+            If the field is not contained in this object, it returns a null value.
 
-    Parameters
-    ----------
-    set_name : str
-        Name of the set.
-    field : str
-        Name of the field in the metadata file.
+            Parameters
+            ----------
+            set_name : str
+                Name of the set.
+            field : str
+                Name of the field in the metadata file.
 
-    Returns
-    -------
-    int
-        Index of the field in the 'object_ids' list.
-]]
-    assert(set_name, ('Must input a valid set name: %s'):format(set_name))
-    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                :format(set_name))
-    assert(field, ('Must input a valid field name: %s'):format(field))
-    return self[set_name]:object_field_id(field)
+            Returns
+            -------
+            number
+                Index of the field in the 'object_ids' list.
+        ]],
+        {name="set_name", type="string",
+         help="Name of the set."},
+        {name="field", type="string",
+         help="Name of the field in the metadata file."}
+    }
+
+    local args = initcheck(...)
+
+    assert(self.sets[args.set_name], ('Set %s does not exist for this dataset.')
+                                     :format(args.set_name))
+    return self[args.set_name]:object_field_id(args.field)
 end
 
-function DataLoader:info(set_name)
---[[
-    Prints information about all data fields of a set.
+function DataLoader:info(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Prints information about all data fields of a set.
 
-    Displays information of all fields of a set group inside the hdf5
-    metadata file. This information contains the name of the field, as well
-    as the size/shape of the data, the data type and if the field is
-    contained in the 'object_ids' list.
+            Displays information of all fields of a set group inside the hdf5
+            metadata file. This information contains the name of the field, as well
+            as the size/shape of the data, the data type and if the field is
+            contained in the 'object_ids' list.
 
-    If no 'set_name' is provided, it displays information for all available
-    sets.
+            If no 'set_name' is provided, it displays information for all available
+            sets.
 
-    This method only shows the most useful information about a set/fields
-    internals, which should be enough for most users in helping to
-    determine how to use/handle a specific dataset with little effort.
+            This method only shows the most useful information about a set/fields
+            internals, which should be enough for most users in helping to
+            determine how to use/handle a specific dataset with little effort.
 
-    Parameters
-    ----------
-    set_name : str, optional
-        Name of the set.
-]]
-    if set_name then
-        self:_get_set_info(set_name)
+            Parameters
+            ----------
+            set_name : str, optional
+                Name of the set.
+        ]],
+        {name="set_name", type="string",
+         help="Name of the set.",
+         opt=true}
+    }
+
+    local args = initcheck(...)
+
+    if args.set_name then
+        self:_get_set_info(args.set_name)
     else
         self:_get_set_info_all()
     end
