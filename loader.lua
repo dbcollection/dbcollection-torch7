@@ -1003,8 +1003,17 @@ function FieldLoader:get(idx)
     local data = {}
     if idx then
         local dtype = type(idx)
-        assert(dtype == 'number' or dtype == 'table', ('Must input a number or table as input: %s.'):format(dtype))
-        return self:_get_range(idx)
+        if dtype == 'number' then
+            return self:_get_range({{idx, idx}})
+        elseif dtype == 'table' then
+            if next(idx) then
+                return self:_get_range({idx})
+            else
+                return self:_get_all()
+            end
+        else
+            error(('Must input a number or table as input: %s.'):format(dtype))
+        end
     else
         return self:_get_all()
     end
@@ -1022,7 +1031,11 @@ end
 
 function FieldLoader:_get_data_memory(idx)
     assert(idx)
-    return self.data[idx]
+    local data = self.data[idx]
+    if type(data) ~= 'number' then
+        data = data:squeeze()
+    end
+    return data
 end
 
 function FieldLoader:_get_data_hdf5(idx)
@@ -1033,27 +1046,17 @@ end
 
 function FieldLoader:_get_ids(idx)
     assert(idx)
-    if type(idx) == 'number' then
-        return self:_get_ids_single(idx)
+    local dtype = type(idx)
+    if dtype == 'number' then
+        return self:_get_ids_table({idx})
+    elseif dtype == 'table' then
+        if next(idx) then
+            return self:_get_ids_table(idx)
+        else
+            return self.ids_list
+        end
     else
-        return self:_get_ids_multiple(idx)
-    end
-end
-
-function FieldLoader:_get_ids_single(idx)
-    assert(idx)
-    local ids = self.ids_list
-    ids[1][1] = idx
-    ids[1][2] = idx
-    return ids
-end
-
-function FieldLoader:_get_ids_multiple(idx)
-    assert(idx)
-    if next(idx) then
-        return self:_get_ids_table(idx)
-    else
-        return self.ids_list
+        error('Invalid index type: ' .. dtype)
     end
 end
 

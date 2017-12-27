@@ -144,99 +144,61 @@ function test.test_FieldLoader_get_single_obj_in_memory()
     tester:eq(data, set_data['data'][id])
 end
 
-function test.test_FieldLoader_get_single_value()
+function test.test_FieldLoader_get_single_obj_list_of_equal_indexes()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
     local id = {1, 1}
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}]:squeeze())
 end
 
-function test.test_FieldLoader_get_single_value_in_memory()
+function test.test_FieldLoader_get_single_obj_list_of_equal_indexes_in_memory()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
     field_loader:to_memory(true)
     local id = {1, 1}
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}]:squeeze())
 end
 
 function test.test_FieldLoader_get_two_obj()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
-    local id = {{1, 2}}
+    local id = {1, 2}
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}])
 end
 
 function test.test_FieldLoader_get_two_obj_in_memory()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
     field_loader:to_memory(true)
-    local id = {{1, 2}}
+    local id = {1, 2}
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}])
 end
 
-function test.test_FieldLoader_get_single_value_two_objs()
+function test.test_FieldLoader_get_multiple_objs()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
-    local id = {{1, 2}, 1}
+    local id = {1, 2, 3, 4}
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}])
 end
 
-function test.test_FieldLoader_get_single_value_two_objs_in_memory()
-    local field_loader, set_data = load_test_data_FieldLoader('train')
-
-    field_loader:to_memory(true)
-    local id = {{1, 2}, 1}
-    local data = field_loader:get(id)
-
-    tester:eq(data, set_data['data'][id])
-end
-
-function test.test_FieldLoader_get_two_values_two_objs()
-    local field_loader, set_data = load_test_data_FieldLoader('train')
-
-    local id = {{1, 2}, {1, 2}}
-    local data = field_loader:get(id)
-
-    tester:eq(data, set_data['data'][id])
-end
-
-function test.test_FieldLoader_get_two_values_two_objs_in_memory()
+function test.test_FieldLoader_get_multiple_objs_in_memory()
     local field_loader, set_data = load_test_data_FieldLoader('train')
 
     field_loader:to_memory(true)
-    local id = {{1, 2}, {1, 2}}
+    local id = {1, 2, 3, 4}
     local data = field_loader:get(id)
 
-    tester:eq(data, set_data['data'][id])
-end
-
-function test.test_FieldLoader_get_multiple_obj()
-    local field_loader, set_data = load_test_data_FieldLoader('train')
-
-    local id = {{1, 2, 3, 4}}
-    local data = field_loader:get(id)
-
-    tester:eq(data, set_data['data'][id])
-end
-
-function test.test_FieldLoader_get_multiple_obj_in_memory()
-    local field_loader, set_data = load_test_data_FieldLoader('train')
-
-    field_loader:to_memory(true)
-    local id = {{1, 2, 3, 4}}
-    local data = field_loader:get(id)
-
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}])
 end
 
 function test.test_FieldLoader_get_all_obj()
@@ -398,42 +360,42 @@ function test.test_SetLoader_get_data_single_obj_in_memory()
     tester:eq(data, set_data['data'][id])
 end
 
-function test.test_SetLoader_get_data_single_value_single_obj()
+function test.test_SetLoader_get_data_two_objs()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
     local id = {1,1}
     local data = set_loader:get('data', id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}]:squeeze())
 end
 
-function test.test_SetLoader_get_data_single_value_single_obj_in_memory()
+function test.test_SetLoader_get_data_two_objs_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
     set_loader.data:to_memory(true)
     local id = {1,1}
     local data = set_loader:get('data', id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}]:squeeze())
 end
 
 function test.test_SetLoader_get_data_multiple_objs()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    local id = {{1,3}}
+    local id = {1,3}
     local data = set_loader:get('data', id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}])
 end
 
 function test.test_SetLoader_get_data_multiple_objs_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
     set_loader.data:to_memory(true)
-    local id = {{1,3}}
+    local id = {1,3}
     local data = set_loader:get('data', id)
 
-    tester:eq(data, set_data['data'][id])
+    tester:eq(data, set_data['data'][{id}])
 end
 
 function test.test_SetLoader_get_data_all_obj()
