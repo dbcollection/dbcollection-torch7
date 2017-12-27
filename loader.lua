@@ -500,10 +500,8 @@ function SetLoader:get(field, idx)
 
     Returns
     -------
-    np.ndarray
+    torch.*Tensor
         Tensor array containing the field's data.
-    Table
-        Table of tensors if using a list of indexes.
 ]]
     assert(field, ('Must input a valid field name: %s'):format(field))
     assert(is_val_in_table(field, self.fields), ('Field \'%s\' does not exist in the \'%s\' set.')
@@ -589,50 +587,33 @@ function SetLoader:_convert(idx)
             Value/list of a field from the metadata cache file.
     ]]
     assert(idx)
-    local indexes = self:_convert_to_table_of_tables(idx)
-    local object_fields = self:_convert_fields_idx_to_val(indexes)
-    return self:_convert_fields_output(object_fields)
-end
 
-function SetLoader:_convert_to_table_of_tables(idx)
-    if type(idx) == 'number' then
-        return {{idx}}
-    else
-        if type(idx[1]) == 'number' then
-            return {idx}
-        else
-            return idx
-        end
+    local idx_ = idx
+    if idx:nDimension() == 1 then
+        idx_ = idx_:view(1, -1)
     end
-end
 
-function SetLoader:_convert_fields_idx_to_val(indexes)
     local output = {}
-    for i=1, #indexes do
-        local data = self:_get_object_fields_data_from_idx(indexes[i])
+    local num_samples = idx_:size(1)
+    for i=1, num_samples do
+        local data = self:_get_object_field_data_from_idx(idx_[i])
         table.insert(output, data)
     end
     return output
 end
 
-function SetLoader:_get_object_fields_data_from_idx(indexes)
+function SetLoader:_get_object_field_data_from_idx(idx)
     local data = {}
     for k, field in ipairs(self._object_fields) do
-        if indexes[k] > 0 then
-            table.insert(data, self:get(field, indexes[k]))
+        if idx[k] >= 0 then
+            -- because python is 0-indexed, we need to increment
+            -- the hdf5 data elements by one to get the correct index
+            table.insert(data, self:get(field, idx[k] + 1))
         else
             table.insert(data, {})
         end
     end
     return data
-end
-
-function SetLoader:_convert_fields_output(object_fields_values)
-    if #object_fields_values > 1 then
-        return object_fields_values
-    else
-        return object_fields_values[1]
-    end
 end
 
 function SetLoader:size(field)
@@ -996,34 +977,38 @@ function FieldLoader:get(idx)
     Returns
     -------
     torch.*Tensor
-        Numpy array containing the field's data.
-    table
-        List of tensors if using a list of indexes.
+        Array containing the field's data.
 ]]
-    local data = {}
     if idx then
-        local dtype = type(idx)
-        if dtype == 'number' then
-            return self:_get_range({{idx, idx}})
-        elseif dtype == 'table' then
-            if next(idx) then
-                return self:_get_range({idx})
-            else
-                return self:_get_all()
-            end
-        else
-            error(('Must input a number or table as input: %s.'):format(dtype))
-        end
+        return self:_get_by_index(idx)
     else
         return self:_get_all()
     end
-    return data
+end
+
+function FieldLoader:_get_by_index(idx)
+    local dtype = type(idx)
+    if dtype == 'number' then
+        return self:_get_range({{idx, idx}})
+    elseif dtype == 'table' then
+        if next(idx) then
+            return self:_get_range({idx})
+        else
+            return self:_get_all()
+        end
+    else
+        error(('Must input a number or table as input: %s.'):format(dtype))
+    end
 end
 
 function FieldLoader:_get_range(idx)
     assert(idx)
     if self._in_memory then
-        return self:_get_data_memory(idx)
+        local data = self:_get_data_memory(idx)
+        if type(data) ~= 'number' then
+            data = data:squeeze(1)
+        end
+        return data
     else
         return self:_get_data_hdf5(idx)
     end
@@ -1031,11 +1016,7 @@ end
 
 function FieldLoader:_get_data_memory(idx)
     assert(idx)
-    local data = self.data[idx]
-    if type(data) ~= 'number' then
-        data = data:squeeze(1)
-    end
-    return data
+    return self.data[idx]
 end
 
 function FieldLoader:_get_data_hdf5(idx)

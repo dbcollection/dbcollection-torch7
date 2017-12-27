@@ -10,6 +10,7 @@ local dbc = require 'dbcollection.env'
 local hdf5 = require 'hdf5'
 
 local str_to_ascii = dbc.utils.string_ascii.convert_str_to_ascii
+local ascii_to_str = dbc.utils.string_ascii.convert_ascii_to_str
 
 local tester
 local test = torch.TestSuite()
@@ -29,11 +30,13 @@ local function generate_dataset()
 
     local dataset = {}
     for set, size in pairs(sets) do
-        local field_name = 'data'
         dataset[set] = {}
-        dataset[set][field_name] = torch.repeatTensor(torch.range(1,10), size, 1)
-        dataset[set]['object_fields'] = str_to_ascii({field_name})
-        dataset[set]['object_ids'] = torch.range(1, size)
+        local fieldA = 'data'
+        dataset[set][fieldA] = torch.repeatTensor(torch.range(1,10), size, 1)
+        local fieldB = 'number'
+        dataset[set][fieldB] = torch.range(1,10)
+        dataset[set]['object_fields'] = str_to_ascii({fieldA, fieldB})
+        dataset[set]['object_ids'] = torch.repeatTensor(torch.range(1, size, 1):add(-1), 2, 1):transpose(1,2)
     end
 
     return dataset
@@ -334,10 +337,14 @@ end
 
 function test.test_SetLoader__init()
     local h5obj = load_dummy_hdf5_file()
-    local setLoader = dbc.SetLoader(h5obj:read('/test'))
+    local dataset = generate_dataset()
+
+    local set = 'test'
+    local setLoader = dbc.SetLoader(h5obj:read('/' .. set))
+
     tester:assert(setLoader ~= nil)
-    tester:eq(setLoader.set, 'test')
-    tester:eq(setLoader._object_fields, {'data'})
+    tester:eq(setLoader.set, set)
+    tester:eq(setLoader._object_fields, ascii_to_str(dataset[set]['object_fields']))
     tester:eq(setLoader.nelems, 5)
 end
 
@@ -449,7 +456,9 @@ function test.test_SetLoader_object_single_obj_value()
     local id = 1
     local data = set_loader:object(id, true)
 
-    tester:eq(data, {set_data['data'][id]})
+    tester:eq(data, {
+        {set_data['data'][id], set_data['number'][id]}
+    })
 end
 
 function test.test_SetLoader_object_two_objs()
@@ -464,10 +473,35 @@ end
 function test.test_SetLoader_object_two_objs_value()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    local id = 1
+    local id = {1,2}
     local data = set_loader:object(id, true)
 
-    tester:eq(data, {set_data['data'][id]})
+    tester:eq(data, {
+        {set_data['data'][id[1]], set_data['number'][id[1]]},
+        {set_data['data'][id[2]], set_data['number'][id[2]]}
+    })
+end
+
+function test.test_SetLoader_object_all_objs()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local data = set_loader:object()
+
+    tester:eq(data, set_data['object_ids'])
+end
+
+function test.test_SetLoader_object_all_objs_value()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local data = set_loader:object(nil, true)
+
+    local expected = {}
+    for i=1, set_data['object_ids']:size(1) do
+        table.insert(expected, {set_data['data'][i],
+                                set_data['number'][i]})
+    end
+
+    tester:eq(data, expected)
 end
 
 function test.test_SetLoader_size()
