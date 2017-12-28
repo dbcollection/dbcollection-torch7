@@ -233,8 +233,6 @@ function dbcollection.download(...)
     -- parse options
     local args = initcheck(...)
 
-    assert(args.name, ('Must input a valid dataset name: %s'):format(args.name))
-
     local command = ('import dbcollection as dbc;' ..
                     'dbc.download(name=\'%s\',data_dir=%s,extract_data=%s,verbose=%s,is_test=%s)')
                     :format(args.name,
@@ -666,7 +664,7 @@ end
 function dbcollection.info_cache(...)
     local initcheck = argcheck{
         pack=true,
-        doc=[[
+        help=[[
             Prints the cache contents and other information.
 
             Parameters
@@ -719,7 +717,7 @@ end
 function dbcollection.info_datasets(...)
     local initcheck = argcheck{
         pack=true,
-        doc=[[
+        help=[[
             Prints information about available and downloaded datasets.
 
             Parameters
