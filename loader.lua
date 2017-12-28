@@ -422,7 +422,7 @@ function DataLoader:object_field_id(...)
 
             Parameters
             ----------
-            set_name : str
+            set : str
                 Name of the set.
             field : str
                 Name of the field in the metadata file.
@@ -432,7 +432,7 @@ function DataLoader:object_field_id(...)
             number
                 Index of the field in the 'object_ids' list.
         ]],
-        {name="set_name", type="string",
+        {name="set", type="string",
          help="Name of the set."},
         {name="field", type="string",
          help="Name of the field in the metadata file."}
@@ -440,9 +440,8 @@ function DataLoader:object_field_id(...)
 
     local args = initcheck(...)
 
-    assert(self.sets[args.set_name], ('Set %s does not exist for this dataset.')
-                                     :format(args.set_name))
-    return self[args.set_name]:object_field_id(args.field)
+    self:_check_if_set_is_valid(args.set)
+    return self[args.set]:object_field_id(args.field)
 end
 
 function DataLoader:info(...)

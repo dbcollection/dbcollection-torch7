@@ -846,7 +846,24 @@ function test.test_DataLoader_list_all_sets()
     tester:eq(fields, expected)
 end
 
-function test.test_DataLoader_object_field_id()
+function test.test_DataLoader_object_field_id_field1()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'test'
+    local field = 'data'
+    local obj_id = data_loader:object_field_id(set, field)
+
+    tester:eq(obj_id, 1)
+end
+
+function test.test_DataLoader_object_field_id_field2()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local field = 'number'
+    local obj_id = data_loader:object_field_id(set, field)
+
+    tester:eq(obj_id, 2)
 end
 
 function test.test_DataLoader_info()
