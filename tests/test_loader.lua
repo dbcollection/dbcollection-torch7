@@ -884,6 +884,16 @@ function test.test_DataLoader_info_all_sets()
 end
 
 function test.test_DataLoader__len__()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local length = #data_loader
+
+    local nsets = 0
+    for k, v in pairs(dataset) do
+        nsets = nsets + 1
+    end
+
+    tester:eq(length, nsets)
 end
 
 function test.test_DataLoader__tostring__()
