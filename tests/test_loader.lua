@@ -143,6 +143,19 @@ local function load_test_data_SetLoader(set)
     return field_loader, set_data, set_fields
 end
 
+local function load_test_data_DataLoader()
+    local name = 'some_db'
+    local task = 'task'
+    local data_dir = './some/dir'
+    local file = hdf5_file
+
+    local data_loader = dbc.DataLoader(name, task, data_dir, file)
+
+    local dataset, fields = generate_dataset()
+
+    return data_loader, dataset, fields
+end
+
 
 --------------------------------------------------------------------------------
 -- Tests
@@ -629,51 +642,83 @@ function test.test_DataLoader_init()
     tester:eq(DataLoader.sets, {'test','train'})
 end
 
-function test.test_DataLoader_open_hdf5_file()
-    --local loader, utils  = setUp()
-    --tester:assert(loader:_open_hdf5_file() ~=  nil)
+function test.test_DataLoader_get_single_obj_train()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = 1
+    local field = 'data'
+    local data = data_loader:get(set, field, id)
+
+    tester:eq(data, dataset[set][field][id])
 end
 
-function test.test_DataLoader_get_set_names()
-    --local loader, utils  = setUp()
-    --tester:eq(loader.sets, loader:_get_set_names())
+function test.test_DataLoader_get_single_obj_train_named_args()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = 1
+    local field = 'data'
+    local data = data_loader:get({
+        set = set,
+        field = field,
+        index = id
+    })
+
+    tester:eq(data, dataset[set][field][id])
 end
 
-function test.test_DataLoader_get_object_fields()
-    --local loader, utils  = setUp()
-    --tester:eq(loader.object_fields, loader:_get_object_fields())
+function test.test_DataLoader_get_two_objs_train()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = {2,3}
+    local field = 'data'
+    local data = data_loader:get(set, field, id)
+
+    tester:eq(data, dataset[set][field][{id}])
 end
 
-function test.test_DataLoader_get()
-    --local loader, utils  = setUp()
+function test.test_DataLoader_get_all_objs_train()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = {}
+    local field = 'data'
+    local data = data_loader:get(set, field, id)
+
+    tester:eq(data, dataset[set][field])
+end
+
+function test.test_DataLoader_get_all_objs_test()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'test'
+    local field = 'data'
+    local data = data_loader:get(set, field)
+
+    tester:eq(data, dataset[set][field])
 end
 
 function test.test_DataLoader_object()
-    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_size()
-    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_list()
-    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_object_field_id()
-    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader_info()
-    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader__len__()
-    --local loader, utils  = setUp()
 end
 
 function test.test_DataLoader__tostring__()
-    --local loader, utils  = setUp()
 end
 
 

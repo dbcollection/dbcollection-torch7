@@ -202,7 +202,7 @@ function DataLoader:get(...)
 
             Parameters
             ----------
-            set_name : str
+            set : str
                 Name of the set.
             field : str
                 Name of the field.
@@ -215,7 +215,7 @@ function DataLoader:get(...)
             torch.*Tensor
                 Numpy array containing the field's data.
         ]],
-        {name="set_name", type="string",
+        {name="set", type="string",
          help="Name of the set."},
         {name="field", type="string",
          help="Name of the field."},
@@ -232,7 +232,7 @@ function DataLoader:get(...)
     local initcheck_ = argcheck{
         quiet=true,
         pack=true,
-        {name="set_name", type="string"},
+        {name="set", type="string"},
         {name="field", type="string"},
         {name="index", type="number"}
     }
@@ -243,9 +243,10 @@ function DataLoader:get(...)
         args = initcheck(...)
     end
 
-    assert(self.sets[args.set_name], ('Set %s does not exist for this dataset.')
-                                     :format(args.set_name))
-    return self[set_name]:get(field, idx)
+    local is_set_name_valid = is_val_in_table(args.set, self.sets)
+    assert(is_set_name_valid, ('Set %s does not exist for this dataset.')
+                              :format(args.set))
+    return self[args.set]:get(args.field, args.index)
 end
 
 function DataLoader:object(...)
@@ -642,7 +643,7 @@ function SetLoader:get(...)
     end
 
     local is_field_valid = is_val_in_table(args.field, self.fields)
-    assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(field, self.set))
+    assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(args.field, self.set))
     return self[args.field]:get(args.index)
 end
 
