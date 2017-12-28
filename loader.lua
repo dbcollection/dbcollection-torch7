@@ -806,9 +806,12 @@ function SetLoader:size(...)
 
     local args = initcheck(...)
 
-    local is_field_valid = is_val_in_table(args.field, self._object_fields)
-    assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(field, self.set))
-    return self.hdf5_group:getOrCreateChild(args.field):dataspaceSize()
+    if args.field ~= 'object_ids' then
+        local is_field_valid = is_val_in_table(args.field, self._object_fields)
+        assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(field, self.set))
+    end
+
+    return self[args.field]:size()
 end
 
 function SetLoader:list(...)

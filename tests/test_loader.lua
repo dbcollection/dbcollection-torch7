@@ -226,7 +226,7 @@ function test.test_FieldLoader_size()
 
     local size = field_loader:size()
 
-    tester:eq(size, set_data['data']:size():totable(), 'Sizes are not the same')
+    tester:eq(size, set_data['data']:size():totable())
 end
 
 function test.test_FieldLoader_object_field_id()
@@ -234,7 +234,7 @@ function test.test_FieldLoader_object_field_id()
 
     local obj_id = field_loader:object_field_id()
 
-    tester:eq(obj_id, 1, 'Object ids are not the same')
+    tester:eq(obj_id, 1)
 end
 
 function test.test_FieldLoader_info()
@@ -505,6 +505,19 @@ function test.test_SetLoader_object_all_objs_value()
 end
 
 function test.test_SetLoader_size()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local size = set_loader:size('data')
+
+    tester:eq(size, set_data['data']:size():totable())
+end
+
+function test.test_SetLoader_size_object_ids()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local size = set_loader:size()
+
+    tester:eq(size, set_data['object_ids']:size():totable())
 end
 
 function test.test_SetLoader_list()
@@ -526,8 +539,9 @@ function test.test_DataLoader_init()
     local task = 'task'
     local data_dir = './some/dir'
     local file = hdf5_file
+
     local DataLoader = dbc.DataLoader(name, task, data_dir, file)
-    tester:assert(DataLoader ~=  nil)
+
     tester:eq(DataLoader.db_name, name)
     tester:eq(DataLoader.task, task)
     tester:eq(DataLoader.data_dir, data_dir)
