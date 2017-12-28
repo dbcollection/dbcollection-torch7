@@ -28,18 +28,27 @@ local function generate_dataset()
         test = 5
     }
 
+    local fields = {
+        data = function(size) return torch.repeatTensor(torch.range(1,10), size, 1) end,
+        number = function(size) return torch.range(1,10) end,
+        numberkjiasdjiaojisdjaisdjij = function(size) return torch.range(1,10) end,
+    }
+
     local dataset = {}
+    local data_fields = {}
     for set, size in pairs(sets) do
         dataset[set] = {}
-        local fieldA = 'data'
-        dataset[set][fieldA] = torch.repeatTensor(torch.range(1,10), size, 1)
-        local fieldB = 'number'
-        dataset[set][fieldB] = torch.range(1,10)
-        dataset[set]['object_fields'] = str_to_ascii({fieldA, fieldB})
-        dataset[set]['object_ids'] = torch.repeatTensor(torch.range(1, size, 1):add(-1), 2, 1):transpose(1,2)
+        data_fields[set] = {}
+        for k, v in pairs(fields) do
+            dataset[set][k] = v(size)
+            table.insert(data_fields[set], k)
+        end
+        table.sort(data_fields[set])
+        dataset[set]['object_fields'] = str_to_ascii(data_fields[set])
+        dataset[set]['object_ids'] = torch.repeatTensor(torch.range(1, size, 1):add(-1), #data_fields[set], 1):transpose(1,2)
     end
 
-    return dataset
+    return dataset, data_fields
 end
 
 local function create_hdf5_file()
@@ -90,7 +99,7 @@ local function load_test_data_FieldLoader(set)
     local path = '/' .. set .. '/data'
     local field_loader = load_dummy_hdf5_file_FieldLoader(path)
 
-    local dataset = generate_dataset()
+    local dataset, fields = generate_dataset()
     local set_data = dataset[set]
 
     return field_loader, set_data
@@ -107,10 +116,11 @@ local function load_test_data_SetLoader(set)
     local set = set or 'train'
     local field_loader = load_dummy_hdf5_file_SetLoader(set)
 
-    local dataset = generate_dataset()
+    local dataset, fields = generate_dataset()
     local set_data = dataset[set]
+    local set_fields = fields[set]
 
-    return field_loader, set_data
+    return field_loader, set_data, set_fields
 end
 
 
@@ -450,15 +460,31 @@ function test.test_SetLoader_object_single_obj()
     tester:eq(data, set_data['object_ids'][id])
 end
 
+---
+local function get_expected_object_values(set_data, set_fields, ids)
+    local expected = {}
+    for _, i in ipairs(ids) do
+        local dfields = {}
+        for _, field in ipairs(set_fields) do
+            table.insert(dfields, set_data[field][i])
+        end
+        table.insert(expected, dfields)
+    end
+    return expected
+end
+---
+
 function test.test_SetLoader_object_single_obj_value()
-    local set_loader, set_data = load_test_data_SetLoader('train')
+    local set_loader, set_data, set_fields = load_test_data_SetLoader('train')
 
     local id = 1
     local data = set_loader:object(id, true)
 
-    tester:eq(data, {
-        {set_data['data'][id], set_data['number'][id]}
-    })
+    local expected = get_expected_object_values(set_data,
+                                                set_fields,
+                                                {id})
+
+    tester:eq(data, expected)
 end
 
 function test.test_SetLoader_object_two_objs()
@@ -471,15 +497,16 @@ function test.test_SetLoader_object_two_objs()
 end
 
 function test.test_SetLoader_object_two_objs_value()
-    local set_loader, set_data = load_test_data_SetLoader('train')
+    local set_loader, set_data, set_fields = load_test_data_SetLoader('train')
 
     local id = {1,2}
     local data = set_loader:object(id, true)
 
-    tester:eq(data, {
-        {set_data['data'][id[1]], set_data['number'][id[1]]},
-        {set_data['data'][id[2]], set_data['number'][id[2]]}
-    })
+    local expected = get_expected_object_values(set_data,
+                                                set_fields,
+                                                id)
+
+    tester:eq(data, expected)
 end
 
 function test.test_SetLoader_object_all_objs()
@@ -491,15 +518,14 @@ function test.test_SetLoader_object_all_objs()
 end
 
 function test.test_SetLoader_object_all_objs_value()
-    local set_loader, set_data = load_test_data_SetLoader('train')
+    local set_loader, set_data, set_fields = load_test_data_SetLoader('train')
 
     local data = set_loader:object(nil, true)
 
-    local expected = {}
-    for i=1, set_data['object_ids']:size(1) do
-        table.insert(expected, {set_data['data'][i],
-                                set_data['number'][i]})
-    end
+    local range = torch.range(1, set_data['object_ids']:size(1)):totable()
+    local expected = get_expected_object_values(set_data,
+                                                set_fields,
+                                                range)
 
     tester:eq(data, expected)
 end
