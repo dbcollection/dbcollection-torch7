@@ -36,6 +36,14 @@ local function get_cache_file_path(options)
     end
 end
 
+--[[ Load the cache file into memory ]]
+local function load_cache(options)
+    local home_path = get_cache_file_path(options)
+    if not paths.filep(home_path) then
+        dbcollection.config_cache({is_test=options.is_test})
+    end
+    return json.load(home_path)
+end
 
 --[[ parse all booleans to strings in python format ]]
 local function tostring_py(input)
@@ -89,112 +97,91 @@ local function exists_task(cache, name, task)
     end
 end
 
+--[[ check if a task exists in cache for a dataset ]]
+local function exists_task_in_cache(options)
+    assert(options)
+    local cache = load_cache(options)
+    return exists_task(cache, options.name, options.task)
+end
+
 --[[ Return the correct name of the default task for a dataset. ]]
-local function fetch_default_task_name(name)
-    local cmd = 'from dbcollection.manager import fetch_default_task_name;' ..
-                ('print(fetch_default_task_name(\'%s\'))'):format(name)
+local function get_default_task_name(name)
+    local cmd = 'from dbcollection.manager import get_default_task_name;' ..
+                ('print(get_default_task_name(\'%s\'))'):format(name)
     return os.capture(string.format('python -c "%s"', cmd))
 end
+
+--[[ Validates / corrects the task name ]]
+local function validate_task_name(options)
+    assert(options)
+    if options.task == 'default' then
+        options.task= get_default_task_name(options.name)
+    end
+end
+
+--[[ Check if the dataset records exist in the cache ]]
+local function is_dataset_in_cache(options)
+    local cache = load_cache(options)
+    if cache['dataset'][options.name] then
+        return true
+    else
+        return false
+    end
+end
+
+--[[ Download a dataset's data files if there are no records in the cache file ]]
+local function download_data(options)
+    if not is_dataset_in_cache(options) then
+        dbcollection.download({name=options.name,
+                               data_dir=options.data_dir,
+                               extract_data=true,
+                               verbose=options.verbose,
+                               is_test=options.is_test})
+    end
+end
+
+--[[ Processes the dataset's metadata if there are no records in the cache file ]]
+local function process_data(options)
+    if not exists_task_in_cache(options) then
+        dbcollection.process({name=options.name,
+                              task=options.task,
+                              verbose=options.verbose,
+                              is_test=options.is_test})
+    end
+end
+
+--[[ load check if task exists after download + process setup ]]
+local function check_if_task_exists(options)
+    assert(options)
+    if not exists_task_in_cache(options) then
+        error('Dataset name/task not available in cache for load.')
+    end
+end
+
+--[[ Returns a data loader for a dataset ]]
+local function get_data_loader(options)
+    assert(options)
+    local cache = load_cache(options)
+    local data_dir, cache_path = get_dataset_paths(cache, options.name, options.task)
+    return dbcollection.DatasetLoader(options.name, options.task, data_dir, cache_path)
+end
+
+--[[ Get all datasets into a table ]]
+function fetch_list_datasets()
+    local db_list = {}
+    return db_list
+end
+
+--------------------------------------------------------------------------------
+-- Vars
+--------------------------------------------------------------------------------
+
+dbcollection.available_datasets_list = fetch_list_datasets()
+
 
 -----------------------------------------------------------
 -- API functions
 -----------------------------------------------------------
-
-function dbcollection.load(...)
-    local initcheck = argcheck{
-        pack=true,
-        help=[[
-            Returns a data loader of a dataset.
-
-            Returns a loader with the necessary functions to manage the selected dataset.
-
-            Parameters
-            ----------
-            name : str
-                Name of the dataset.
-            task : str
-                Name of the task to load.
-                (optional, default='default')
-            data_dir : str
-                Directory path to store the downloaded data.
-                (optional, default='')
-            verbose : bool
-                Displays text information (if true).
-                (optional, default=true)
-            is_test : bool
-                Flag used for tests.
-                (optional, default=false)
-
-            Returns
-            -------
-            DatasetLoader
-                Data loader class.
-
-        ]],
-        {name="name", type="string",
-         help="Name of the dataset."},
-        {name="task", type="string", default='default',
-         help="Name of the task to load.",
-         opt = true},
-        {name="data_dir", type="string", default='',
-         help="Path to store the data (if the data doesn't exist and the download flag is equal True).",
-         opt = true},
-        {name="verbose", type="boolean", default=true,
-         help="Displays text information (if true).",
-         opt = true},
-        {name="is_test", type="boolean", default=false,
-         help="Flag used for tests.",
-         opt = true}
-    }
-
-    -- parse options
-    local args = initcheck(...)
-
-    local home_path = get_cache_file_path(args)
-
-    -- check if the .json cache has been initialized
-    if not paths.filep(home_path) then
-        dbcollection.config_cache({is_test=args.is_test}) -- creates the cache file on disk if it doesn't exist
-    end
-
-    -- read the cache file (dbcollection.json)
-    local cache = json.load(home_path)
-
-    -- convert task if equal to 'default'
-    if args.task == 'default' then
-        local task_name = fetch_default_task_name(args.name)
-        args.task = task_name
-    end
-
-    -- check if the dataset exists in the cache
-    if not cache['dataset'][args.name] then
-        dbcollection.download({name=args.name, data_dir=args.data_dir, extract_data=true,
-                          verbose=args.verbose, is_test=args.is_test})
-        cache = json.load(home_path) -- reload the cache file
-    end
-
-    -- check if the task exists in the cache
-    if not exists_task(cache, args.name, args.task) then
-        dbcollection.process({name=args.name, task=args.task, verbose=args.verbose,
-                         is_test=args.is_test})
-        cache = json.load(home_path) -- reload the cache file
-    end
-
-    -- load check if task exists
-    if not cache['dataset'][args.name]["tasks"][args.task] then
-        error('Dataset name/task not available in cache for load.')
-    end
-
-    -- get dataset paths (data + cache)
-    local data_dir, cache_path = get_dataset_paths(cache, args.name, args.task)
-
-    -- load HDF5 file
-    local loader = dbcollection.DatasetLoader(args.name, args.task, data_dir, cache_path)
-
-    return loader
-end
-
-------------------------------------------------------------------------------------------------------------
 
 function dbcollection.download(...)
     local initcheck = argcheck{
@@ -210,24 +197,27 @@ function dbcollection.download(...)
             ----------
             name : str
                 Name of the dataset.
-            data_dir : str
+            data_dir : str, optional
                 Directory path to store the downloaded data.
-                (optional, default='None')
-            extract_data : bool
+            extract_data : bool, optional
                 Extracts/unpacks the data files (if true).
-                (optional, default=true)
-            verbose : bool
+            verbose : bool, optional
                 Displays text information (if true).
-                (optional, default=true)
-            is_test : bool
+            is_test : bool, optional
                 Flag used for tests.
-                (optional, default=false)
+
+            Examples
+            --------
+            Download the CIFAR10 dataset to disk.
+
+            >>> dbc = require 'dbcollection'
+            >>> dbc.download('cifar10')
 
         ]],
         {name="name", type="string",
          help="Name of the dataset."},
         {name="data_dir", type="string", default='None',
-         help="Path to store the data (if the data doesn't exist and the download flag is equal True).",
+         help="Directory path to store the downloaded data.",
          opt = true},
         {name="extract_data", type="boolean", default=true,
          help="Extracts/unpacks the data files (if true).",
@@ -243,12 +233,13 @@ function dbcollection.download(...)
     -- parse options
     local args = initcheck(...)
 
-    assert(args.name, ('Must input a valid dataset name: %s'):format(args.name))
-
     local command = ('import dbcollection as dbc;' ..
                     'dbc.download(name=\'%s\',data_dir=%s,extract_data=%s,verbose=%s,is_test=%s)')
-                    :format(args.name, tostring_none(args.data_dir), tostring_py(args.extract_data),
-                            tostring_py(args.verbose), tostring_py(args.is_test))
+                    :format(args.name,
+                            tostring_none(args.data_dir),
+                            tostring_py(args.extract_data),
+                            tostring_py(args.verbose),
+                            tostring_py(args.is_test))
 
     os.execute(('python -c "%s"'):format(command))
 end
@@ -261,21 +252,25 @@ function dbcollection.process(...)
         help=[[
             Process a dataset's metadata and stores it to file.
 
-            The data is stored in a HDF5 file for each task composing the dataset's tasks.
+            The data is stored a a HSF5 file for each task composing the dataset's tasks.
 
             Parameters
             ----------
             name : str
                 Name of the dataset.
-            task : str
+            task : str, optional
                 Name of the task to process.
-                (optional, default='all')
-            verbose : bool
+            verbose : bool, optional
                 Displays text information (if true).
-                (optional, default=true)
-            is_test : bool
+            is_test : bool, optional
                 Flag used for tests.
-                (optional, default=false)
+
+            Examples
+            --------
+            Download the CIFAR10 dataset to disk.
+
+            >>> dbc = require 'dbcollection'
+            >>> dbc.process({name='cifar10', task='classification', verbose=False})
 
         ]],
         {name="name", type="string",
@@ -298,13 +293,93 @@ function dbcollection.process(...)
 
     local command = ('import dbcollection as dbc;' ..
                     'dbc.process(name=\'%s\',task=\'%s\',verbose=%s,is_test=%s)')
-                    :format(args.name, args.task, tostring_py(args.verbose),
+                    :format(args.name,
+                            args.task,
+                            tostring_py(args.verbose),
                             tostring_py(args.is_test))
 
     os.execute(('python -c "%s"'):format(command))
 end
 
 ------------------------------------------------------------------------------------------------------------
+
+function dbcollection.load(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Returns a metadata loader of a dataset.
+
+            Returns a loader with the necessary functions to manage the selected dataset.
+
+            Parameters
+            ----------
+            name : str
+                Name of the dataset.
+            task : str, optional
+                Name of the task to load.
+            data_dir : str, optional
+                Directory path to store the downloaded data.
+            verbose : bool, optional
+                Displays text information (if true).
+            is_test : bool, optional
+                Flag used for tests.
+
+            Returns
+            -------
+            DataLoader
+               Data loader class.
+
+            Examples
+            --------
+            Load the MNIST dataset.
+
+            >>> dbc = require 'dbcollection'
+            >>> mnist = dbc.load('mnist')
+            >>> print('Dataset name: ' .. mnist.db_name)
+            Dataset name:  mnist
+
+        ]],
+        {name="name", type="string",
+         help="Name of the dataset."},
+        {name="task", type="string", default='default',
+         help="Name of the task to load.",
+         opt = true},
+        {name="data_dir", type="string", default='',
+         help="Directory path to store the downloaded data.",
+         opt = true},
+        {name="verbose", type="boolean", default=true,
+         help="Displays text information (if true).",
+         opt = true},
+        {name="is_test", type="boolean", default=false,
+         help="Flag used for tests.",
+         opt = true}
+    }
+
+    local args = initcheck(...)  -- parse options
+    validate_task_name(args)
+    download_data(args)
+    process_data(args)
+    check_if_task_exists(args)
+    local loader = get_data_loader(args)
+    return loader
+end
+
+------------------------------------------------------------------------------------------------------------
+
+local function parse_keywords_format(keywords)
+    local kwords
+    if next(keywords) then
+        local str = ''
+        for i=1, #keywords do
+            str = str .. tostring(keywords[i])
+            if i<#keywords then str = str .. ',' end
+        end
+        kwords = ("['%s']"):format(str)
+    else
+        kwords = '[]'
+    end
+    return kwords
+end
 
 function dbcollection.add(...)
     local initcheck = argcheck{
@@ -319,15 +394,23 @@ function dbcollection.add(...)
             task : str
                 Name of the task to load.
             data_dir : str
-                Path of the stored data on disk.
-            file_path : str
+                Path of the stored data in disk.
+            file_path : bool
                 Path to the metadata HDF5 file.
-            keywords : table
-                Table of strings of keywords that categorize the dataset.
-                (optional, default={})
-            is_test : bool
+            keywords : list of strings, optional
+                List of keywords to categorize the dataset.
+            is_test : bool, optional
                 Flag used for tests.
-                (optional, default=false)
+
+            Examples
+            --------
+            Add a dataset manually to dbcollection.
+
+            >>> dbc = require 'dbcollection'
+            >>> dbc.add('new_db', 'new_task', 'new/path/db', 'newdb.h5', ['new_category'])
+            >>> dbc.query('new_db')
+            {'new_db': {'tasks': {'new_task': 'newdb.h5'}, 'data_dir': 'new/path/db', 'keywords':
+            ['new_category']}}
 
         ]],
         {name="name", type="string",
@@ -335,7 +418,7 @@ function dbcollection.add(...)
         {name="task", type="string",
          help="Name of the task to load."},
         {name="data_dir", type="string",
-         help="Path of the stored data on disk."},
+         help="Path of the stored data in disk."},
         {name="file_path", type="string",
          help="Path to the metadata HDF5 file."},
         {name="keywords", type="table", default={},
@@ -355,22 +438,17 @@ function dbcollection.add(...)
     assert(args.file_path, ('Must input a valid dataset name: %s'):format(args.file_path))
 
     -- parse the table into a string in python's format
-    if next(args.keywords) then
-        local str = ''
-        for i=1, #args.keywords do
-            str = str .. tostring(args.keywords[i])
-            if i<=#args.keywords then str = str .. ',' end
-        end
-        args.keywords = ('[%s]'):format(str)
-    else
-        args.keywords = '[]'
-    end
+    args.keywords = parse_keywords_format(args.keywords)
 
     local command = ('import dbcollection as dbc;' ..
                     'dbc.add(name=\'%s\',task=\'%s\',data_dir=\'%s\',' ..
                     'file_path=\'%s\',keywords=%s,is_test=%s)')
-                    :format(args.name, args.task, args.data_dir, args.file_path,
-                            args.keywords, tostring_py(args.is_test))
+                    :format(args.name,
+                            args.task,
+                            args.data_dir,
+                            args.file_path,
+                            args.keywords,
+                            tostring_py(args.is_test))
 
     os.execute(('python -c "%s"'):format(command))
 end
@@ -384,7 +462,7 @@ function dbcollection.remove(...)
             Remove/delete a dataset and/or task from the cache.
 
             Removes the datasets cache information from the dbcollection.json file.
-            The dataset's data files remain on disk if 'delete_data' is set to False,
+            The dataset's data files remain in disk if 'delete_data' is set to False,
             otherwise it removes also the data files.
 
             Also, instead of deleting the entire dataset, removing a specific task
@@ -396,12 +474,27 @@ function dbcollection.remove(...)
             ----------
             name : str
                 Name of the dataset to delete.
-            task : str, (optional, default='None')
+            task : str, optional
                 Name of the task to delete.
-            delete_data : bool, (optional, default=false)
+            delete_data : bool, optional
                 Delete all data files from disk for this dataset if True.
-            is_test : bool, (optional, default=false)
+            is_test : bool, optional
                 Flag used for tests.
+
+            Examples
+            --------
+            Remove a dataset from the list.
+
+            >>> dbc = require 'dbcollection'
+            >>> -- add a dataset
+            >>> dbc.add('new_db', 'new_task', 'new/path/db', 'newdb.h5', ['new_category'])
+            >>> dbc.query('new_db')
+            {'new_db': {'tasks': {'new_task': 'newdb.h5'}, 'data_dir': 'new/path/db',
+            'keywords': ['new_category']}}
+            >>> dbc.remove('new_db')  -- remove the dataset
+            Removed 'new_db' dataset: cache=True, disk=False
+            >>> dbc.query('new_db')  -- check if the dataset info was removed (retrieves an empty dict)
+            {}
 
         ]],
         {name="name", type="string",
@@ -423,7 +516,8 @@ function dbcollection.remove(...)
 
     local command = ('import dbcollection as dbc;' ..
                     'dbc.remove(name=\'%s\',task=%s,delete_data=%s,is_test=%s)')
-                    :format(args.name, tostring_none(args.task),
+                    :format(args.name,
+                            tostring_none(args.task),
                             tostring_py(args.delete_data),
                             tostring_py(args.is_test))
 
@@ -450,32 +544,36 @@ function dbcollection.config_cache(...)
             from the file by simply enabling the 'reset_cache' flag to true.
 
             Also, there is an option to completely remove the cache file+folder
-            from the disk by enabling 'delete_cache' to true. This will remove the
+            from the disk by enabling 'delete_cache' to True. This will remove the
             cache dbcollection.json and the dbcollection/ folder from disk.
 
             Parameters
             ----------
-            field : str
+            field : str, optional
                 Name of the field to update/modify in the cache file.
-                (optional, default='None')
-            value : str, list, table
+            value : str, list, table, optional
                 Value to update the field.
-                (optional, default='None')
-            delete_cache : bool
+            delete_cache : bool, optional
                 Delete/remove the dbcollection cache file + directory.
-                (optional, default=false)
-            delete_cache_dir : bool
+            delete_cache_dir : bool, optional
                 Delete/remove the dbcollection cache directory.
-                (optional, default=false)
-            delete_cache_file : bool
+            delete_cache_file : bool, optional
                 Delete/remove the dbcollection.json cache file.
-                (optional, default=false)
-            reset_cache : bool
+            reset_cache : bool, optional
                 Reset the cache file.
-                (optional, default=false)
-            is_test : bool
+            verbose : bool, optional
+                Displays text information (if true).
+            is_test : bool, optional
                 Flag used for tests.
-                (optional, default=false)
+
+            Examples
+            --------
+            Delete the cache by removing the dbcollection.json cache file.
+            This will NOT remove the file contents in dbcollection/. For that,
+            you must set the *delete_cache_dir* argument to True.
+
+            >>> dbc = require 'dbcollection'
+            >>> dbc.config_cache({delete_cache_file=true})
 
         ]],
         {name="field", type="string", default="None",
@@ -496,6 +594,9 @@ function dbcollection.config_cache(...)
         {name="reset_cache", type="boolean", default=false,
          help="Reset the cache file.",
          opt = true},
+        {name="verbose", type="boolean", default=true,
+         help="Displays text information (if true).",
+         opt = true},
         {name="is_test", type="boolean", default=false,
          help="Flag used for tests.",
          opt = true}
@@ -507,10 +608,14 @@ function dbcollection.config_cache(...)
     local command = ('import dbcollection as dbc;' ..
                     'dbc.config_cache(field=%s,value=%s,delete_cache=%s, ' ..
                     'delete_cache_dir=%s,delete_cache_file=%s,reset_cache=%s, ' ..
-                    'is_test=%s)')
-                    :format(tostring_none(args.field), tostring_none(args.value),
-                            tostring_py(args.delete_cache), tostring_py(args.delete_cache_dir),
-                            tostring_py(args.delete_cache_file), tostring_py(args.reset_cache),
+                    'verbose=%s,is_test=%s)')
+                    :format(tostring_none(args.field),
+                            tostring_none(args.value),
+                            tostring_py(args.delete_cache),
+                            tostring_py(args.delete_cache_dir),
+                            tostring_py(args.delete_cache_file),
+                            tostring_py(args.reset_cache),
+                            tostring_py(args.verbose),
                             tostring_py(args.is_test))
 
     os.execute(('python -c "%s"'):format(command))
@@ -556,67 +661,37 @@ end
 
 ------------------------------------------------------------------------------------------------------------
 
-function dbcollection.info(...)
+function dbcollection.info_cache(...)
     local initcheck = argcheck{
         pack=true,
-        doc=[[
+        help=[[
             Prints the cache contents and other information.
-
-            This method provides a dual functionality: (1) It displays
-            the cache file content that shows which datasets are
-            available for loading right now; (2) It can display all
-            available datasets to use in the dbcollection package, and
-            if a name is provided, it displays what tasks it contains
-            for loading.
-
-            The default is to display the cache file contents to the
-            screen. To list the available datasets, set the 'name'
-            input argument to 'all'. To list the tasks of a specific
-            dataset, set the 'name' input argument to the name of the
-            desired dataset (e.g., 'cifar10').
 
             Parameters
             ----------
-            name : str
-                Name of the dataset to display information.
-                (optional, default='None')
-            paths_info : bool
+            name : str/table, optional
+                Name or list of names to be selected for print.
+            paths_info : bool, optional
                 Print the paths info to screen.
-                (optional, default=true)
-            datasets_info : bool/str
+            datasets_info : bool, optional
                 Print the datasets info to screen.
-                If a string is provided, it selects
-                only the information of that string
-                (dataset name).
-                (optional, default=true)
-            categories_info : bool/str
-                Print the paths info to screen.
-                If a string is provided, it selects
-                only the information of that string
-                (dataset name).
-                (optional, default=true)
-            is_test : bool
+            categories_info : bool, optional
+                Print the categories keywords info to screen.
+            is_test : bool, optional
                 Flag used for tests.
-                (optional, default=false)
 
         ]],
         {name="name", type="string", default='None',
          help="Name of the dataset to display information.",
          opt = true},
-        {name="paths_info", type="string", default='true',
+        {name="paths_info", type="boolean", default=true,
          help=" Print the paths info to screen.",
          opt = true},
-        {name="datasets_info", type="string", default='true',
-         help="Print the datasets info to screen." ..
-                "If a string is provided, it selects" ..
-                "only the information of that string" ..
-                "(dataset name).",
+        {name="datasets_info", type="boolean", default=true,
+         help="Print the datasets info to screen.",
          opt = true},
-        {name="categories_info", type="string", default='true',
-         help="Print the paths info to screen. " ..
-                "If a string is provided, it selects" ..
-                "only the information of that string" ..
-                "(dataset name).",
+        {name="categories_info", type="boolean", default=true,
+         help="Print the paths info to screen.",
          opt = true},
         {name="is_test", type="boolean", default=false,
          help="Flag used for tests.",
@@ -627,11 +702,56 @@ function dbcollection.info(...)
     local args = initcheck(...)
 
     local command = ('import dbcollection as dbc;' ..
-                     'dbc.info(name=%s, paths_info=%s, datasets_info=%s, categories_info=%s, is_test=%s)')
+                     'dbc.info_cache(name=%s, paths_info=%s, datasets_info=%s, categories_info=%s, is_test=%s)')
                      :format(tostring_none(args.name),
-                             tostring_py2(args.paths_info),
-                             tostring_py2(args.datasets_info),
-                             tostring_py2(args.categories_info),
+                             tostring_py(args.paths_info),
+                             tostring_py(args.datasets_info),
+                             tostring_py(args.categories_info),
+                             tostring_py(args.is_test))
+
+    os.execute(('python -c "%s"'):format(command))
+end
+
+------------------------------------------------------------------------------------------------------------
+
+function dbcollection.info_datasets(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Prints information about available and downloaded datasets.
+
+            Parameters
+            ----------
+            db_pattern : str
+                String for matching dataset names available for downloading in the database.
+            show_downloaded : bool, optional
+                Print the downloaded datasets stored in cache.
+            show_available : bool, optional
+                Print the available datasets for load/download with dbcollection.
+
+        ]],
+        {name="db_pattern", type="string", default='',
+         help="String for matching dataset names available for downloading in the database.",
+         opt = true},
+        {name="show_downloaded", type="boolean", default=true,
+         help="Print the downloaded datasets stored in cache.",
+         opt = true},
+        {name="show_available", type="boolean", default=true,
+         help="Print the available datasets for load/download with dbcollection.",
+         opt = true},
+        {name="is_test", type="boolean", default=false,
+         help="Flag used for tests.",
+         opt = true},
+    }
+
+    -- parse options
+    local args = initcheck(...)
+
+    local command = ('import dbcollection as dbc;' ..
+                     'dbc.info_datasets(db_pattern=\'%s\', show_downloaded=%s, show_available=%s, is_test=%s)')
+                     :format(args.db_pattern,
+                             tostring_py(args.show_downloaded),
+                             tostring_py(args.show_available),
                              tostring_py(args.is_test))
 
     os.execute(('python -c "%s"'):format(command))
