@@ -832,14 +832,38 @@ function SetLoader:list(...)
     return self.fields
 end
 
-function SetLoader:object_field_id(field)
-    self:_validate_object_field_id_input(field)
-    local idx = self:_get_object_field_id(field)
-    assert(idx, 'Field does not exist in \'_object_fields\'')
+function SetLoader:object_field_id(...)
+    local initcheck = argcheck{
+        pack=true,
+        help=[[
+            Retrieves the index position of the field in the 'object_ids' list.
+
+            This method returns the position of the field in the 'object_ids' object.
+            If the field is not contained in this object, it returns a null value.
+
+            Parameters
+            ----------
+            field : str
+                Name of the field in the metadata file.
+
+            Returns
+            -------
+            number
+                Index of the field in the 'object_ids' list.
+        ]],
+        {name="field", type="string",
+         help="Name of the field in the metadata file."}
+    }
+
+    local args = initcheck(...)
+
+    self:_validate_object_field_id_input(args.field)
+    local idx = self[args.field]:object_field_id()
+    assert(idx, ('Field \'%s\' does not exist in \'_object_fields\''):format(args.field))
     return idx
 end
 
-function SetLoader:_validate_object_field_id_input()
+function SetLoader:_validate_object_field_id_input(field)
     assert(field, 'Must input a valid field.')
     assert(is_val_in_table(field, self._object_fields),
            ('Field \'%s\' does not exist \'object_fields\' set.')
