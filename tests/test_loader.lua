@@ -771,7 +771,46 @@ function test.test_DataLoader_object_all_objs_no_index()
     tester:eq(data, dataset[set]['object_ids'])
 end
 
-function test.test_DataLoader_size()
+function test.test_DataLoader_size_single_field()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'test'
+    local field = 'data'
+    local size = data_loader:size(set, field)
+
+    tester:eq(size, dataset[set][field]:size():totable())
+end
+
+function test.test_DataLoader_size_default()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'test'
+    local size = data_loader:size(set)
+
+    tester:eq(size, dataset[set]['object_ids']:size():totable())
+end
+
+function test.test_DataLoader_size_single_field_all_sets()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local field = 'data'
+    local size = data_loader:size({field=field})
+
+    tester:eq(size, {
+        test = dataset['test'][field]:size():totable(),
+        train = dataset['train'][field]:size():totable()
+    })
+end
+
+function test.test_DataLoader_size_no_inputs()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local size = data_loader:size()
+
+    tester:eq(size, {
+        test = dataset['test']['object_ids']:size():totable(),
+        train = dataset['train']['object_ids']:size():totable()
+    })
 end
 
 function test.test_DataLoader_list()

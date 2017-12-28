@@ -326,7 +326,7 @@ function DataLoader:size(...)
 
             Parameters
             ----------
-            set_name : str, optional
+            set : str, optional
                 Name of the set.
             field : str, optional
                 Name of the field in the metadata file.
@@ -336,7 +336,7 @@ function DataLoader:size(...)
             table
                 Returns the size of a field.
         ]],
-        {name="set_name", type="string",
+        {name="set", type="string",
          help="Name of the set.",
          opt=true},
         {name="field", type="string", default='object_ids',
@@ -346,24 +346,23 @@ function DataLoader:size(...)
 
     local args = initcheck(...)
 
-    if args.set_name then
-        self:_get_set_size(args.set_name, args.field)
+    if args.set then
+        self:_check_if_set_is_valid(args.set)
+        return self:_get_set_size(args.set, args.field)
     else
         return self:_get_set_size_all(args.field)
     end
 end
 
-function DataLoader:_get_set_size(set_name, field)
-    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                :format(set_name))
+function DataLoader:_get_set_size(set, field)
     assert(field, 'Must input a field')
-    return self[set_name]:size(field)
+    return self[set]:size(field)
 end
 
 function DataLoader:_get_set_size_all(field)
     assert(field, 'Must input a field')
     local out = {}
-    for set_name, _ in pairs(self.sets) do
+    for _, set_name in pairs(self.sets) do
         out[set_name] = self:_get_set_size(set_name, field)
     end
     return out
