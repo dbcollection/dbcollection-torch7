@@ -464,31 +464,30 @@ function DataLoader:info(...)
 
             Parameters
             ----------
-            set_name : str, optional
+            set : str, optional
                 Name of the set.
         ]],
-        {name="set_name", type="string",
+        {name="set", type="string",
          help="Name of the set.",
          opt=true}
     }
 
     local args = initcheck(...)
 
-    if args.set_name then
-        self:_get_set_info(args.set_name)
+    if args.set then
+        self:_get_set_info(args.set)
     else
         self:_get_set_info_all()
     end
 end
 
-function DataLoader:_get_set_info(set_name)
-    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                :format(set_name))
-    self[set_name]:info()
+function DataLoader:_get_set_info(set)
+    self:_check_if_set_is_valid(set)
+    self[set]:info()
 end
 
 function DataLoader:_get_set_info_all()
-    for set_name, _ in pairs(self.sets) do
+    for _, set_name in pairs(self.sets) do
         self[set_name]:info()
     end
 end

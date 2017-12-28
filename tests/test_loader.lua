@@ -866,7 +866,21 @@ function test.test_DataLoader_object_field_id_field2()
     tester:eq(obj_id, 2)
 end
 
-function test.test_DataLoader_info()
+function test.test_DataLoader_info_single_set()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    data_loader:info(set)
+
+    tester:assert(true)
+end
+
+function test.test_DataLoader_info_all_sets()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    data_loader:info()
+
+    tester:assert(true)
 end
 
 function test.test_DataLoader__len__()
