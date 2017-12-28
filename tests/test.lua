@@ -8,8 +8,8 @@ end
 
 local tester = torch.Tester()
 tester:add(paths.dofile('test_loader.lua')(tester))
---tester:add(paths.dofile('test_api.lua')(tester))
---tester:add(paths.dofile('test_string_ascii.lua')(tester))
+tester:add(paths.dofile('test_api.lua')(tester))
+tester:add(paths.dofile('test_string_ascii.lua')(tester))
 
 function dbc.test(tests)
    tester:run(tests)
