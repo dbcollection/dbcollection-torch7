@@ -597,6 +597,11 @@ function test.test_SetLoader_info()
 end
 
 function test.test_SetLoader__len__()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local length = #set_loader
+
+    tester:eq(length, set_data['object_ids']:size(1))
 end
 
 function test.test_SetLoader__tostring__()
