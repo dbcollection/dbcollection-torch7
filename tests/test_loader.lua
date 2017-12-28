@@ -521,6 +521,25 @@ function test.test_SetLoader_size_object_ids()
 end
 
 function test.test_SetLoader_list()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local fields = set_loader:list()
+
+    local expected = {}
+    for k, v in pairs(set_data) do
+        table.insert(expected, k)
+    end
+    table.sort(expected)
+
+    tester:eq(fields, expected)
+end
+
+function test.test_SetLoader_list_error_call_with_inputs()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local status = pcall(set_loader:list(), 'some input')
+
+    tester:assertError(status)
 end
 
 function test.test_SetLoader_info()
