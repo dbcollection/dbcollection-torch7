@@ -870,15 +870,6 @@ function SetLoader:_validate_object_field_id_input(field)
            :format(field, self.set))
 end
 
-function SetLoader:_get_object_field_id(field)
-    for i=1, #self._object_fields do
-        if field == self._object_fields[i] then
-            return i
-        end
-    end
-    return nil
-end
-
 function SetLoader:info(...)
     local initcheck = argcheck{
         pack=true,
