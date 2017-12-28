@@ -347,7 +347,6 @@ function DataLoader:size(...)
     local args = initcheck(...)
 
     if args.set then
-        self:_check_if_set_is_valid(args.set)
         return self:_get_set_size(args.set, args.field)
     else
         return self:_get_set_size_all(args.field)
@@ -356,6 +355,7 @@ end
 
 function DataLoader:_get_set_size(set, field)
     assert(field, 'Must input a field')
+    self:_check_if_set_is_valid(set)
     return self[set]:size(field)
 end
 
@@ -376,7 +376,7 @@ function DataLoader:list(...)
 
             Parameters
             ----------
-            set_name : str, optional
+            set : str, optional
                 Name of the set.
 
             Returns
@@ -384,29 +384,28 @@ function DataLoader:list(...)
             table
                 List of all data fields of the dataset.
         ]],
-        {name="set_name", type="string",
+        {name="set", type="string",
          help="Name of the set.",
          opt=true}
     }
 
     local args = initcheck(...)
 
-    if args.set_name then
-        return self:_get_set_list(args.set_name)
+    if args.set then
+        return self:_get_set_list(args.set)
     else
         return self:_get_set_list_all()
     end
 end
 
-function DataLoader:_get_set_list(set_name)
-    assert(self.sets[set_name], ('Set %s does not exist for this dataset.')
-                                :format(set_name))
-    return self[set_name]:list()
+function DataLoader:_get_set_list(set)
+    self:_check_if_set_is_valid(set)
+    return self[set]:list()
 end
 
 function DataLoader:_get_set_list_all()
     local out = {}
-    for set_name, _ in pairs(self.sets) do
+    for _, set_name in pairs(self.sets) do
         out[set_name] = self[set_name]:list()
     end
     return out

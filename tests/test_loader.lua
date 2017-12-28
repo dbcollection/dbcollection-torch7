@@ -813,7 +813,37 @@ function test.test_DataLoader_size_no_inputs()
     })
 end
 
-function test.test_DataLoader_list()
+function test.test_DataLoader_list_single_set()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local fields = data_loader:list(set)
+
+    local expected = {}
+    for k, v in pairs(dataset[set]) do
+        table.insert(expected, k)
+    end
+    table.sort(expected)
+
+    tester:eq(fields, expected)
+end
+
+function test.test_DataLoader_list_all_sets()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local fields = data_loader:list()
+
+    local expected = {}
+    for set, set_data in pairs(dataset) do
+        local fields = {}
+        for k, v in pairs(set_data) do
+            table.insert(fields, k)
+        end
+        table.sort(fields)
+        expected[set] = fields
+    end
+
+    tester:eq(fields, expected)
 end
 
 function test.test_DataLoader_object_field_id()
