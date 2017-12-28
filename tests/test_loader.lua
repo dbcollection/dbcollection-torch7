@@ -589,6 +589,11 @@ function test.test_SetLoader_list_error_call_with_inputs()
 end
 
 function test.test_SetLoader_info()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local fields = set_loader:info()
+
+    tester:assert(true)
 end
 
 function test.test_SetLoader__len__()
