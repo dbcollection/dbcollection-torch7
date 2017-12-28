@@ -497,7 +497,7 @@ function DataLoader:__len__()
 end
 
 function DataLoader:__tostring__()
-    return ("DataLoader: %s (%s task)"):format(self.db_name, self.task)
+    return ("DataLoader: \'%s\' (\'%s\' task)"):format(self.db_name, self.task)
 end
 
 

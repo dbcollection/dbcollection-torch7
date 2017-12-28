@@ -897,6 +897,11 @@ function test.test_DataLoader__len__()
 end
 
 function test.test_DataLoader__tostring__()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local matching_str = ("DataLoader: \'%s\' (\'%s\' task)"):format(data_loader.db_name, data_loader.task)
+
+    tester:eq(data_loader:__tostring__(), matching_str)
 end
 
 
