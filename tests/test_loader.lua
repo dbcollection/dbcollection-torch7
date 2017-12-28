@@ -605,6 +605,11 @@ function test.test_SetLoader__len__()
 end
 
 function test.test_SetLoader__tostring__()
+    local set_loader, set_data = load_test_data_SetLoader('train')
+
+    local matching_str = ('SetLoader: set<%s>, len<%s>'):format('train', set_data['object_ids']:size(1))
+
+    tester:eq(set_loader:__tostring__(), matching_str)
 end
 
 ------------------------------------------------------------------------------------------------------------
