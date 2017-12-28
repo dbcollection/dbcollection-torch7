@@ -243,10 +243,13 @@ function DataLoader:get(...)
         args = initcheck(...)
     end
 
-    local is_set_name_valid = is_val_in_table(args.set, self.sets)
-    assert(is_set_name_valid, ('Set %s does not exist for this dataset.')
-                              :format(args.set))
+    self:_check_if_set_is_valid(args.set)
     return self[args.set]:get(args.field, args.index)
+end
+
+function DataLoader:_check_if_set_is_valid(set)
+    local is_set_name_valid = is_val_in_table(set, self.sets)
+    assert(is_set_name_valid, ('Set %s does not exist for this dataset.'):format(set))
 end
 
 function DataLoader:object(...)
@@ -263,7 +266,7 @@ function DataLoader:object(...)
 
             Parameters
             ----------
-            set_name : str
+            set : str
                 Name of the set.
             index : number/table, optional
                 Index number of the field. If it is a list, returns the data
@@ -279,7 +282,7 @@ function DataLoader:object(...)
                 Returns a list of indexes or, if convert_to_value is True,
                 a list of data arrays/values.
         ]],
-        {name="set_name", type="string",
+        {name="set", type="string",
          help="Name of the set."},
         {name="index", type="table", default={},
          help="Index number of the field. If it is a list, returns the data " ..
@@ -298,7 +301,7 @@ function DataLoader:object(...)
     local initcheck_ = argcheck{
         quiet=true,
         pack=true,
-        {name="set_name", type="string"},
+        {name="set", type="string"},
         {name="index", type="number"},
         {name="convert_to_value", type="boolean", default=false, opt=true}
     }
@@ -309,9 +312,8 @@ function DataLoader:object(...)
         args = initcheck(...)
     end
 
-    assert(self.sets[args.set_name], ('Set %s does not exist for this dataset.')
-                                     :format(args.set_name))
-    return self[args.set_name]:object(args.index, args.convert_to_value)
+    self:_check_if_set_is_valid(args.set)
+    return self[args.set]:object(args.index, args.convert_to_value)
 end
 
 function DataLoader:size(...)

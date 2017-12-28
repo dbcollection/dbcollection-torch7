@@ -642,7 +642,7 @@ function test.test_DataLoader_init()
     tester:eq(DataLoader.sets, {'test','train'})
 end
 
-function test.test_DataLoader_get_single_obj_train()
+function test.test_DataLoader_get_single_obj()
     local data_loader, dataset = load_test_data_DataLoader()
 
     local set = 'train'
@@ -653,7 +653,7 @@ function test.test_DataLoader_get_single_obj_train()
     tester:eq(data, dataset[set][field][id])
 end
 
-function test.test_DataLoader_get_single_obj_train_named_args()
+function test.test_DataLoader_get_single_obj_named_args()
     local data_loader, dataset = load_test_data_DataLoader()
 
     local set = 'train'
@@ -668,7 +668,7 @@ function test.test_DataLoader_get_single_obj_train_named_args()
     tester:eq(data, dataset[set][field][id])
 end
 
-function test.test_DataLoader_get_two_objs_train()
+function test.test_DataLoader_get_two_objs()
     local data_loader, dataset = load_test_data_DataLoader()
 
     local set = 'train'
@@ -679,7 +679,7 @@ function test.test_DataLoader_get_two_objs_train()
     tester:eq(data, dataset[set][field][{id}])
 end
 
-function test.test_DataLoader_get_all_objs_train()
+function test.test_DataLoader_get_all_objs()
     local data_loader, dataset = load_test_data_DataLoader()
 
     local set = 'train'
@@ -690,7 +690,7 @@ function test.test_DataLoader_get_all_objs_train()
     tester:eq(data, dataset[set][field])
 end
 
-function test.test_DataLoader_get_all_objs_test()
+function test.test_DataLoader_get_all_objs_no_index()
     local data_loader, dataset = load_test_data_DataLoader()
 
     local set = 'test'
@@ -700,7 +700,75 @@ function test.test_DataLoader_get_all_objs_test()
     tester:eq(data, dataset[set][field])
 end
 
-function test.test_DataLoader_object()
+function test.test_DataLoader_object_single_obj()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = 1
+    local data = data_loader:object(set, id)
+
+    tester:eq(data, dataset[set]['object_ids'][id])
+end
+
+function test.test_DataLoader_object_single_obj_values()
+    local data_loader, dataset, fields = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = 1
+    local data = data_loader:object(set, id, true)
+
+    local expected = get_expected_object_values(dataset[set],
+                                                fields[set],
+                                                {id})
+
+    tester:eq(data, expected)
+end
+
+function test.test_DataLoader_object_two_objs()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = {1,2}
+    local data = data_loader:object(set, id)
+
+    tester:eq(data, dataset[set]['object_ids'][{id}])
+end
+
+function test.test_DataLoader_object_two_obj_values()
+    local data_loader, dataset, fields = load_test_data_DataLoader()
+
+    local set = 'test'
+    local id = {1,2}
+    local data = data_loader:object({
+        set=set,
+        index=id,
+        convert_to_value=true
+    })
+
+    local expected = get_expected_object_values(dataset[set],
+                                                fields[set],
+                                                id)
+
+    tester:eq(data, expected)
+end
+
+function test.test_DataLoader_object_all_objs()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = {}
+    local data = data_loader:object(set, id)
+
+    tester:eq(data, dataset[set]['object_ids'])
+end
+
+function test.test_DataLoader_object_all_objs_no_index()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'test'
+    local data = data_loader:object(set)
+
+    tester:eq(data, dataset[set]['object_ids'])
 end
 
 function test.test_DataLoader_size()
