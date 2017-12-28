@@ -23,6 +23,28 @@ local test = torch.TestSuite()
 local hdf5_file = paths.concat(paths.home, 'tmp', 'dbcollection', 'dummy.h5')
 
 local function generate_dataset()
+
+    ---
+    local function populate_dataset_set_fields(fields, set, size)
+        local dataset = {}
+        local data_fields = {}
+        for k, v in pairs(fields) do
+            dataset[k] = v(size)
+            table.insert(data_fields, k)
+        end
+        table.sort(data_fields)
+        dataset['object_fields'] = str_to_ascii(data_fields)
+        dataset['object_ids'] = torch.repeatTensor(torch.range(1, size, 1):add(-1), #data_fields, 1):transpose(1,2)
+        return dataset, data_fields
+    end
+
+    local function populate_dataset_set_lists(dataset, lists)
+        for k, v in pairs(lists) do
+            dataset['list_' .. k] = v
+        end
+    end
+    ---
+
     local sets = {
         train = 10,
         test = 5
@@ -34,18 +56,16 @@ local function generate_dataset()
         numberkjiasdjiaojisdjaisdjij = function(size) return torch.range(1,10) end,
     }
 
+    local lists = {
+        dummy_data = torch.range(1,10),
+        dummy_number = torch.range(1,10):byte(),
+    }
+
     local dataset = {}
     local data_fields = {}
     for set, size in pairs(sets) do
-        dataset[set] = {}
-        data_fields[set] = {}
-        for k, v in pairs(fields) do
-            dataset[set][k] = v(size)
-            table.insert(data_fields[set], k)
-        end
-        table.sort(data_fields[set])
-        dataset[set]['object_fields'] = str_to_ascii(data_fields[set])
-        dataset[set]['object_ids'] = torch.repeatTensor(torch.range(1, size, 1):add(-1), #data_fields[set], 1):transpose(1,2)
+        dataset[set], data_fields[set] = populate_dataset_set_fields(fields, set, size)
+        populate_dataset_set_lists(dataset[set], lists)
     end
 
     return dataset, data_fields
