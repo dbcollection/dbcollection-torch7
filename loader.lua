@@ -524,11 +524,13 @@ function SetLoader:__init(...)
                 hdf5 group object handler.
             set : str
                 Name of the set.
-            fields : tuple
+            fields : table
+                List of all field loaders of the set.
+            _fields : table
                 List of all field names of the set.
-            _object_fields : tuple
+            object_fields : table
                 List of all field names of the set contained by the 'object_ids' list.
-            nelems : int
+            nelems : number
                 Number of rows in 'object_ids'.
         ]],
         {name="hdf5_group", type="hdf5.HDF5Group",
@@ -823,8 +825,8 @@ function SetLoader:list(...)
 
             Returns
             -------
-            list
-                List of all data fields of the dataset.
+            table
+                List of all data field names of the dataset.
         ]]
     }
 
@@ -1116,13 +1118,13 @@ function FieldLoader:__init(...)
                 Name of the set.
             name : str
                 Name of the field.
-            type : type
+            type : str
                 Type of the field's data.
-            shape : tuple
+            shape : table
                 Shape of the field's data.
-            fillvalue : int
+            fillvalue : number
                 Value used to pad arrays when storing the data in the hdf5 file.
-            obj_id : int
+            obj_id : number
                 Identifier of the field if contained in the 'object_ids' list.
         ]],
         {name="hdf5_field", type="hdf5.HDF5DataSet",
