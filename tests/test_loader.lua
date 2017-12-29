@@ -639,7 +639,7 @@ function test.test_DataLoader_init()
     tester:eq(DataLoader.task, task)
     tester:eq(DataLoader.data_dir, data_dir)
     tester:eq(DataLoader.hdf5_filepath, file)
-    tester:eq(DataLoader.sets, {'test','train'})
+    tester:eq(DataLoader._sets, {'test','train'})
 end
 
 function test.test_DataLoader_get_single_obj()

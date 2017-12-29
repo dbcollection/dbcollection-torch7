@@ -114,9 +114,9 @@ function DataLoader:__init(...)
                 hdf5 file object handler.
             root_path : str
                 Default data group of the hdf5 file.
-            sets : tuple
+            sets : table
                 List of names of set splits (e.g. train, test, val, etc.)
-            object_fields : dict
+            object_fields : table
                 Data field names for each set split.
 
         ]],
@@ -142,7 +142,7 @@ function DataLoader:__init(...)
     self.file = self:_open_hdf5_file()
     self.root_path = '/'
 
-    self.sets = self:_get_set_names()
+    self._sets = self:_get_set_names()
     self.object_fields = self:_get_object_fields()
 
     -- make links for all groups (train/val/test/etc) for easier access
@@ -164,7 +164,7 @@ end
 
 function DataLoader:_get_object_fields()
     local object_fields = {}
-    for _, set in pairs(self.sets) do
+    for _, set in pairs(self._sets) do
         object_fields[set] = self:_get_object_fields_data_from_set(set)
     end
     return object_fields
@@ -180,7 +180,7 @@ function DataLoader:_get_object_fields_data_from_set(set)
 end
 
 function DataLoader:_set_SetLoaders()
-    for _, set in pairs(self.sets) do
+    for _, set in pairs(self._sets) do
         local hdf5_group_path = self.root_path .. set
         self[set] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path))
     end
@@ -248,7 +248,7 @@ function DataLoader:get(...)
 end
 
 function DataLoader:_check_if_set_is_valid(set)
-    local is_set_name_valid = is_val_in_table(set, self.sets)
+    local is_set_name_valid = is_val_in_table(set, self._sets)
     assert(is_set_name_valid, ('Set %s does not exist for this dataset.'):format(set))
 end
 
@@ -362,7 +362,7 @@ end
 function DataLoader:_get_set_size_all(field)
     assert(field, 'Must input a field')
     local out = {}
-    for _, set_name in pairs(self.sets) do
+    for _, set_name in pairs(self._sets) do
         out[set_name] = self:_get_set_size(set_name, field)
     end
     return out
@@ -405,7 +405,7 @@ end
 
 function DataLoader:_get_set_list_all()
     local out = {}
-    for _, set_name in pairs(self.sets) do
+    for _, set_name in pairs(self._sets) do
         out[set_name] = self[set_name]:list()
     end
     return out
@@ -487,13 +487,13 @@ function DataLoader:_get_set_info(set)
 end
 
 function DataLoader:_get_set_info_all()
-    for _, set_name in pairs(self.sets) do
+    for _, set_name in pairs(self._sets) do
         self[set_name]:info()
     end
 end
 
 function DataLoader:__len__()
-    return #self.sets
+    return #self._sets
 end
 
 function DataLoader:__tostring__()
