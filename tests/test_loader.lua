@@ -387,7 +387,7 @@ function test.test_SetLoader__init()
 
     tester:assert(setLoader ~= nil)
     tester:eq(setLoader.set, set)
-    tester:eq(setLoader._object_fields, ascii_to_str(dataset[set]['object_fields']))
+    tester:eq(setLoader.object_fields, ascii_to_str(dataset[set]['object_fields']))
     tester:eq(setLoader.nelems, 5)
 end
 

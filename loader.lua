@@ -539,7 +539,7 @@ function SetLoader:__init(...)
 
     self.hdf5_group = args.hdf5_group
     self.set = self:_get_set_name()
-    self._object_fields = self:_get_object_fields_data()
+    self.object_fields = self:_get_object_fields_data()
     self.nelems = self:_get_num_elements()
     self._fields = self:_get_field_names()
     self.fields = self:_load_hdf5_fields()  -- add all hdf5 datasets as data fields
@@ -587,7 +587,7 @@ end
 function SetLoader:_load_hdf5_fields()
     local fields = {}
     for _, field in pairs(self._fields) do
-        local obj_id = get_value_id_in_list(field, self._object_fields)
+        local obj_id = get_value_id_in_list(field, self.object_fields)
         local hdf5_dataset = self:_get_hdf5_dataset(field)
         fields[field] = dbcollection.FieldLoader(hdf5_dataset, obj_id)
     end
@@ -770,7 +770,7 @@ end
 
 function SetLoader:_get_object_field_data_from_idx(idx)
     local data = {}
-    for k, field in ipairs(self._object_fields) do
+    for k, field in ipairs(self.object_fields) do
         if idx[k] >= 0 then
             -- because python is 0-indexed, we need to increment
             -- the hdf5 data elements by one to get the correct index
@@ -808,7 +808,7 @@ function SetLoader:size(...)
     local args = initcheck(...)
 
     if args.field ~= 'object_ids' then
-        local is_field_valid = is_val_in_table(args.field, self._object_fields)
+        local is_field_valid = is_val_in_table(args.field, self.object_fields)
         assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(field, self.set))
     end
 
@@ -866,7 +866,7 @@ end
 
 function SetLoader:_validate_object_field_id_input(field)
     assert(field, 'Must input a valid field.')
-    assert(is_val_in_table(field, self._object_fields),
+    assert(is_val_in_table(field, self.object_fields),
            ('Field \'%s\' does not exist \'object_fields\' set.')
            :format(field, self.set))
 end
@@ -978,7 +978,7 @@ function SetLoader:_set_field_metadata(field, shape, dtype)
     assert(shape)
     assert(dtype)
     local s_obj = ''
-    if is_val_in_table(field, self._object_fields) then
+    if is_val_in_table(field, self.object_fields) then
         s_obj = ("(in 'object_ids', position = %d)"):format(self:object_field_id(field))
     end
     table.insert(self._fields_info, {
