@@ -115,6 +115,8 @@ function DataLoader:__init(...)
             root_path : str
                 Default data group of the hdf5 file.
             sets : table
+                List of set loaders for each set split (e.g. train, test, val, etc.)
+            _sets : table
                 List of names of set splits (e.g. train, test, val, etc.)
             object_fields : table
                 Data field names for each set split.
@@ -132,21 +134,18 @@ function DataLoader:__init(...)
 
     local args = initcheck(...)
 
-    -- store information of the dataset
     self.db_name = args.name
     self.task = args.task
     self.data_dir = args.data_dir
     self.hdf5_filepath = args.hdf5_filepath
 
-    -- create a handler for the cache file
     self.file = self:_open_hdf5_file()
     self.root_path = '/'
 
     self._sets = self:_get_set_names()
     self.object_fields = self:_get_object_fields()
-
-    -- make links for all groups (train/val/test/etc) for easier access
-    self:_set_SetLoaders()
+    -- make links for all groups (train/val/test/etc.) for easier access
+    self.sets = self:_set_SetLoaders()
 end
 
 function DataLoader:_open_hdf5_file()
@@ -180,10 +179,12 @@ function DataLoader:_get_object_fields_data_from_set(set)
 end
 
 function DataLoader:_set_SetLoaders()
+    local sets = {}
     for _, set in pairs(self._sets) do
         local hdf5_group_path = self.root_path .. set
-        self[set] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path))
+        sets[set] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path))
     end
+    return sets
 end
 
 function DataLoader:_get_hdf5_group(path)
@@ -244,7 +245,7 @@ function DataLoader:get(...)
     end
 
     self:_check_if_set_is_valid(args.set)
-    return self[args.set]:get(args.field, args.index)
+    return self.sets[args.set]:get(args.field, args.index)
 end
 
 function DataLoader:_check_if_set_is_valid(set)
@@ -313,7 +314,7 @@ function DataLoader:object(...)
     end
 
     self:_check_if_set_is_valid(args.set)
-    return self[args.set]:object(args.index, args.convert_to_value)
+    return self.sets[args.set]:object(args.index, args.convert_to_value)
 end
 
 function DataLoader:size(...)
@@ -356,7 +357,7 @@ end
 function DataLoader:_get_set_size(set, field)
     assert(field, 'Must input a field')
     self:_check_if_set_is_valid(set)
-    return self[set]:size(field)
+    return self.sets[set]:size(field)
 end
 
 function DataLoader:_get_set_size_all(field)
@@ -400,13 +401,13 @@ end
 
 function DataLoader:_get_set_list(set)
     self:_check_if_set_is_valid(set)
-    return self[set]:list()
+    return self.sets[set]:list()
 end
 
 function DataLoader:_get_set_list_all()
     local out = {}
     for _, set_name in pairs(self._sets) do
-        out[set_name] = self[set_name]:list()
+        out[set_name] = self.sets[set_name]:list()
     end
     return out
 end
@@ -441,7 +442,7 @@ function DataLoader:object_field_id(...)
     local args = initcheck(...)
 
     self:_check_if_set_is_valid(args.set)
-    return self[args.set]:object_field_id(args.field)
+    return self.sets[args.set]:object_field_id(args.field)
 end
 
 function DataLoader:info(...)
@@ -483,12 +484,12 @@ end
 
 function DataLoader:_get_set_info(set)
     self:_check_if_set_is_valid(set)
-    self[set]:info()
+    self.sets[set]:info()
 end
 
 function DataLoader:_get_set_info_all()
     for _, set_name in pairs(self._sets) do
-        self[set_name]:info()
+        self.sets[set_name]:info()
     end
 end
 

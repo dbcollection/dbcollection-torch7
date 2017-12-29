@@ -668,6 +668,17 @@ function test.test_DataLoader_get_single_obj_named_args()
     tester:eq(data, dataset[set][field][id])
 end
 
+function test.test_DataLoader_get_single_obj_access_via_SetLoader()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = 1
+    local field = 'data'
+    local data = data_loader.sets[set]:get(field, id)
+
+    tester:eq(data, dataset[set][field][id])
+end
+
 function test.test_DataLoader_get_two_objs()
     local data_loader, dataset = load_test_data_DataLoader()
 
