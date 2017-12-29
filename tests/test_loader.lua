@@ -403,7 +403,7 @@ end
 function test.test_SetLoader_get_data_single_obj_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local id = 1
     local data = set_loader:get('data', id)
 
@@ -422,7 +422,7 @@ end
 function test.test_SetLoader_get_data_two_objs_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local id = {1,1}
     local data = set_loader:get('data', id)
 
@@ -441,7 +441,7 @@ end
 function test.test_SetLoader_get_data_multiple_objs_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local id = {1,3}
     local data = set_loader:get('data', id)
 
@@ -459,7 +459,7 @@ end
 function test.test_SetLoader_get_data_all_obj_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local data = set_loader:get('data')
 
     tester:eq(data, set_data['data'])
@@ -477,7 +477,7 @@ end
 function test.test_SetLoader_get_data_single_obj_object_ids_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local id = 1
     local data = set_loader:get('object_ids', id)
 
