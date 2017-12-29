@@ -539,9 +539,9 @@ function SetLoader:__init(...)
 
     self.hdf5_group = args.hdf5_group
     self.set = self:_get_set_name()
-    self.fields = self:_get_fields()
     self._object_fields = self:_get_object_fields_data()
     self.nelems = self:_get_num_elements()
+    self._fields = self:_get_field_names()
     self:_load_hdf5_fields()  -- add all hdf5 datasets as data fields
 end
 
@@ -551,7 +551,7 @@ function SetLoader:_get_set_name()
     return str[1]
 end
 
-function SetLoader:_get_fields()
+function SetLoader:_get_field_names()
     local fields = {}
     for k, v in pairs(self.hdf5_group._children) do
         table.insert(fields, k)
@@ -585,7 +585,7 @@ function SetLoader:_get_num_elements()
 end
 
 function SetLoader:_load_hdf5_fields()
-    for _, field in pairs(self.fields) do
+    for _, field in pairs(self._fields) do
         local obj_id = get_value_id_in_list(field, self._object_fields)
         local hdf5_dataset = self:_get_hdf5_dataset(field)
         self[field] = dbcollection.FieldLoader(hdf5_dataset, obj_id)
@@ -640,7 +640,7 @@ function SetLoader:get(...)
         args = initcheck(...)
     end
 
-    local is_field_valid = is_val_in_table(args.field, self.fields)
+    local is_field_valid = is_val_in_table(args.field, self._fields)
     assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(args.field, self.set))
     return self[args.field]:get(args.index)
 end
@@ -828,7 +828,7 @@ function SetLoader:list(...)
 
     local args = initcheck(...)
 
-    return self.fields
+    return self._fields
 end
 
 function SetLoader:object_field_id(...)
@@ -918,8 +918,8 @@ function SetLoader:_init_max_sizes()
 end
 
 function SetLoader:_set_info_data()
-    for i=1, #self.fields do
-        self:_set_field_data(self.fields[i])
+    for i=1, #self._fields do
+        self:_set_field_data(self._fields[i])
     end
 end
 
