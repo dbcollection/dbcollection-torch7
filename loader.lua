@@ -542,7 +542,7 @@ function SetLoader:__init(...)
     self._object_fields = self:_get_object_fields_data()
     self.nelems = self:_get_num_elements()
     self._fields = self:_get_field_names()
-    self:_load_hdf5_fields()  -- add all hdf5 datasets as data fields
+    self.fields = self:_load_hdf5_fields()  -- add all hdf5 datasets as data fields
 end
 
 function SetLoader:_get_set_name()
@@ -585,11 +585,13 @@ function SetLoader:_get_num_elements()
 end
 
 function SetLoader:_load_hdf5_fields()
+    local fields = {}
     for _, field in pairs(self._fields) do
         local obj_id = get_value_id_in_list(field, self._object_fields)
         local hdf5_dataset = self:_get_hdf5_dataset(field)
-        self[field] = dbcollection.FieldLoader(hdf5_dataset, obj_id)
+        fields[field] = dbcollection.FieldLoader(hdf5_dataset, obj_id)
     end
+    return fields
 end
 
 function SetLoader:get(...)
@@ -642,7 +644,7 @@ function SetLoader:get(...)
 
     local is_field_valid = is_val_in_table(args.field, self._fields)
     assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(args.field, self.set))
-    return self[args.field]:get(args.index)
+    return self.fields[args.field]:get(args.index)
 end
 
 function SetLoader:object(...)
@@ -810,7 +812,7 @@ function SetLoader:size(...)
         assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(field, self.set))
     end
 
-    return self[args.field]:size()
+    return self.fields[args.field]:size()
 end
 
 function SetLoader:list(...)
@@ -857,7 +859,7 @@ function SetLoader:object_field_id(...)
     local args = initcheck(...)
 
     self:_validate_object_field_id_input(args.field)
-    local idx = self[args.field]:object_field_id()
+    local idx = self.fields[args.field]:object_field_id()
     assert(idx, ('Field \'%s\' does not exist in \'_object_fields\''):format(args.field))
     return idx
 end
