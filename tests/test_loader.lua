@@ -387,7 +387,7 @@ function test.test_SetLoader__init()
 
     tester:assert(setLoader ~= nil)
     tester:eq(setLoader.set, set)
-    tester:eq(setLoader._object_fields, ascii_to_str(dataset[set]['object_fields']))
+    tester:eq(setLoader.object_fields, ascii_to_str(dataset[set]['object_fields']))
     tester:eq(setLoader.nelems, 5)
 end
 
@@ -403,7 +403,7 @@ end
 function test.test_SetLoader_get_data_single_obj_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local id = 1
     local data = set_loader:get('data', id)
 
@@ -422,7 +422,7 @@ end
 function test.test_SetLoader_get_data_two_objs_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local id = {1,1}
     local data = set_loader:get('data', id)
 
@@ -441,7 +441,7 @@ end
 function test.test_SetLoader_get_data_multiple_objs_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local id = {1,3}
     local data = set_loader:get('data', id)
 
@@ -459,7 +459,7 @@ end
 function test.test_SetLoader_get_data_all_obj_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local data = set_loader:get('data')
 
     tester:eq(data, set_data['data'])
@@ -477,7 +477,7 @@ end
 function test.test_SetLoader_get_data_single_obj_object_ids_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.data:to_memory(true)
+    set_loader.fields.data:to_memory(true)
     local id = 1
     local data = set_loader:get('object_ids', id)
 
@@ -639,7 +639,7 @@ function test.test_DataLoader_init()
     tester:eq(DataLoader.task, task)
     tester:eq(DataLoader.data_dir, data_dir)
     tester:eq(DataLoader.hdf5_filepath, file)
-    tester:eq(DataLoader.sets, {'test','train'})
+    tester:eq(DataLoader._sets, {'test','train'})
 end
 
 function test.test_DataLoader_get_single_obj()
@@ -664,6 +664,17 @@ function test.test_DataLoader_get_single_obj_named_args()
         field = field,
         index = id
     })
+
+    tester:eq(data, dataset[set][field][id])
+end
+
+function test.test_DataLoader_get_single_obj_access_via_SetLoader()
+    local data_loader, dataset = load_test_data_DataLoader()
+
+    local set = 'train'
+    local id = 1
+    local field = 'data'
+    local data = data_loader.sets[set]:get(field, id)
 
     tester:eq(data, dataset[set][field][id])
 end

@@ -114,9 +114,11 @@ function DataLoader:__init(...)
                 hdf5 file object handler.
             root_path : str
                 Default data group of the hdf5 file.
-            sets : tuple
+            sets : table
+                List of set loaders for each set split (e.g. train, test, val, etc.)
+            _sets : table
                 List of names of set splits (e.g. train, test, val, etc.)
-            object_fields : dict
+            object_fields : table
                 Data field names for each set split.
 
         ]],
@@ -132,21 +134,18 @@ function DataLoader:__init(...)
 
     local args = initcheck(...)
 
-    -- store information of the dataset
     self.db_name = args.name
     self.task = args.task
     self.data_dir = args.data_dir
     self.hdf5_filepath = args.hdf5_filepath
 
-    -- create a handler for the cache file
     self.file = self:_open_hdf5_file()
     self.root_path = '/'
 
-    self.sets = self:_get_set_names()
+    self._sets = self:_get_set_names()
     self.object_fields = self:_get_object_fields()
-
-    -- make links for all groups (train/val/test/etc) for easier access
-    self:_set_SetLoaders()
+    -- make links for all groups (train/val/test/etc.) for easier access
+    self.sets = self:_set_SetLoaders()
 end
 
 function DataLoader:_open_hdf5_file()
@@ -164,7 +163,7 @@ end
 
 function DataLoader:_get_object_fields()
     local object_fields = {}
-    for _, set in pairs(self.sets) do
+    for _, set in pairs(self._sets) do
         object_fields[set] = self:_get_object_fields_data_from_set(set)
     end
     return object_fields
@@ -180,10 +179,12 @@ function DataLoader:_get_object_fields_data_from_set(set)
 end
 
 function DataLoader:_set_SetLoaders()
-    for _, set in pairs(self.sets) do
+    local sets = {}
+    for _, set in pairs(self._sets) do
         local hdf5_group_path = self.root_path .. set
-        self[set] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path))
+        sets[set] = dbcollection.SetLoader(self:_get_hdf5_group(hdf5_group_path))
     end
+    return sets
 end
 
 function DataLoader:_get_hdf5_group(path)
@@ -244,11 +245,11 @@ function DataLoader:get(...)
     end
 
     self:_check_if_set_is_valid(args.set)
-    return self[args.set]:get(args.field, args.index)
+    return self.sets[args.set]:get(args.field, args.index)
 end
 
 function DataLoader:_check_if_set_is_valid(set)
-    local is_set_name_valid = is_val_in_table(set, self.sets)
+    local is_set_name_valid = is_val_in_table(set, self._sets)
     assert(is_set_name_valid, ('Set %s does not exist for this dataset.'):format(set))
 end
 
@@ -313,7 +314,7 @@ function DataLoader:object(...)
     end
 
     self:_check_if_set_is_valid(args.set)
-    return self[args.set]:object(args.index, args.convert_to_value)
+    return self.sets[args.set]:object(args.index, args.convert_to_value)
 end
 
 function DataLoader:size(...)
@@ -356,13 +357,13 @@ end
 function DataLoader:_get_set_size(set, field)
     assert(field, 'Must input a field')
     self:_check_if_set_is_valid(set)
-    return self[set]:size(field)
+    return self.sets[set]:size(field)
 end
 
 function DataLoader:_get_set_size_all(field)
     assert(field, 'Must input a field')
     local out = {}
-    for _, set_name in pairs(self.sets) do
+    for _, set_name in pairs(self._sets) do
         out[set_name] = self:_get_set_size(set_name, field)
     end
     return out
@@ -400,13 +401,13 @@ end
 
 function DataLoader:_get_set_list(set)
     self:_check_if_set_is_valid(set)
-    return self[set]:list()
+    return self.sets[set]:list()
 end
 
 function DataLoader:_get_set_list_all()
     local out = {}
-    for _, set_name in pairs(self.sets) do
-        out[set_name] = self[set_name]:list()
+    for _, set_name in pairs(self._sets) do
+        out[set_name] = self.sets[set_name]:list()
     end
     return out
 end
@@ -441,7 +442,7 @@ function DataLoader:object_field_id(...)
     local args = initcheck(...)
 
     self:_check_if_set_is_valid(args.set)
-    return self[args.set]:object_field_id(args.field)
+    return self.sets[args.set]:object_field_id(args.field)
 end
 
 function DataLoader:info(...)
@@ -483,17 +484,17 @@ end
 
 function DataLoader:_get_set_info(set)
     self:_check_if_set_is_valid(set)
-    self[set]:info()
+    self.sets[set]:info()
 end
 
 function DataLoader:_get_set_info_all()
-    for _, set_name in pairs(self.sets) do
-        self[set_name]:info()
+    for _, set_name in pairs(self._sets) do
+        self.sets[set_name]:info()
     end
 end
 
 function DataLoader:__len__()
-    return #self.sets
+    return #self._sets
 end
 
 function DataLoader:__tostring__()
@@ -524,11 +525,13 @@ function SetLoader:__init(...)
                 hdf5 group object handler.
             set : str
                 Name of the set.
-            fields : tuple
+            fields : table
+                List of all field loaders of the set.
+            _fields : table
                 List of all field names of the set.
-            _object_fields : tuple
+            object_fields : table
                 List of all field names of the set contained by the 'object_ids' list.
-            nelems : int
+            nelems : number
                 Number of rows in 'object_ids'.
         ]],
         {name="hdf5_group", type="hdf5.HDF5Group",
@@ -539,10 +542,10 @@ function SetLoader:__init(...)
 
     self.hdf5_group = args.hdf5_group
     self.set = self:_get_set_name()
-    self.fields = self:_get_fields()
-    self._object_fields = self:_get_object_fields_data()
+    self.object_fields = self:_get_object_fields_data()
     self.nelems = self:_get_num_elements()
-    self:_load_hdf5_fields()  -- add all hdf5 datasets as data fields
+    self._fields = self:_get_field_names()
+    self.fields = self:_load_hdf5_fields()  -- add all hdf5 datasets as data fields
 end
 
 function SetLoader:_get_set_name()
@@ -551,7 +554,7 @@ function SetLoader:_get_set_name()
     return str[1]
 end
 
-function SetLoader:_get_fields()
+function SetLoader:_get_field_names()
     local fields = {}
     for k, v in pairs(self.hdf5_group._children) do
         table.insert(fields, k)
@@ -585,11 +588,13 @@ function SetLoader:_get_num_elements()
 end
 
 function SetLoader:_load_hdf5_fields()
-    for _, field in pairs(self.fields) do
-        local obj_id = get_value_id_in_list(field, self._object_fields)
+    local fields = {}
+    for _, field in pairs(self._fields) do
+        local obj_id = get_value_id_in_list(field, self.object_fields)
         local hdf5_dataset = self:_get_hdf5_dataset(field)
-        self[field] = dbcollection.FieldLoader(hdf5_dataset, obj_id)
+        fields[field] = dbcollection.FieldLoader(hdf5_dataset, obj_id)
     end
+    return fields
 end
 
 function SetLoader:get(...)
@@ -640,9 +645,9 @@ function SetLoader:get(...)
         args = initcheck(...)
     end
 
-    local is_field_valid = is_val_in_table(args.field, self.fields)
+    local is_field_valid = is_val_in_table(args.field, self._fields)
     assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(args.field, self.set))
-    return self[args.field]:get(args.index)
+    return self.fields[args.field]:get(args.index)
 end
 
 function SetLoader:object(...)
@@ -768,7 +773,7 @@ end
 
 function SetLoader:_get_object_field_data_from_idx(idx)
     local data = {}
-    for k, field in ipairs(self._object_fields) do
+    for k, field in ipairs(self.object_fields) do
         if idx[k] >= 0 then
             -- because python is 0-indexed, we need to increment
             -- the hdf5 data elements by one to get the correct index
@@ -806,11 +811,11 @@ function SetLoader:size(...)
     local args = initcheck(...)
 
     if args.field ~= 'object_ids' then
-        local is_field_valid = is_val_in_table(args.field, self._object_fields)
+        local is_field_valid = is_val_in_table(args.field, self.object_fields)
         assert(is_field_valid, ('Field \'%s\' does not exist in the \'%s\' set.'):format(field, self.set))
     end
 
-    return self[args.field]:size()
+    return self.fields[args.field]:size()
 end
 
 function SetLoader:list(...)
@@ -821,14 +826,14 @@ function SetLoader:list(...)
 
             Returns
             -------
-            list
-                List of all data fields of the dataset.
+            table
+                List of all data field names of the dataset.
         ]]
     }
 
     local args = initcheck(...)
 
-    return self.fields
+    return self._fields
 end
 
 function SetLoader:object_field_id(...)
@@ -857,14 +862,14 @@ function SetLoader:object_field_id(...)
     local args = initcheck(...)
 
     self:_validate_object_field_id_input(args.field)
-    local idx = self[args.field]:object_field_id()
+    local idx = self.fields[args.field]:object_field_id()
     assert(idx, ('Field \'%s\' does not exist in \'_object_fields\''):format(args.field))
     return idx
 end
 
 function SetLoader:_validate_object_field_id_input(field)
     assert(field, 'Must input a valid field.')
-    assert(is_val_in_table(field, self._object_fields),
+    assert(is_val_in_table(field, self.object_fields),
            ('Field \'%s\' does not exist \'object_fields\' set.')
            :format(field, self.set))
 end
@@ -918,8 +923,8 @@ function SetLoader:_init_max_sizes()
 end
 
 function SetLoader:_set_info_data()
-    for i=1, #self.fields do
-        self:_set_field_data(self.fields[i])
+    for i=1, #self._fields do
+        self:_set_field_data(self._fields[i])
     end
 end
 
@@ -976,7 +981,7 @@ function SetLoader:_set_field_metadata(field, shape, dtype)
     assert(shape)
     assert(dtype)
     local s_obj = ''
-    if is_val_in_table(field, self._object_fields) then
+    if is_val_in_table(field, self.object_fields) then
         s_obj = ("(in 'object_ids', position = %d)"):format(self:object_field_id(field))
     end
     table.insert(self._fields_info, {
@@ -1114,13 +1119,13 @@ function FieldLoader:__init(...)
                 Name of the set.
             name : str
                 Name of the field.
-            type : type
+            type : str
                 Type of the field's data.
-            shape : tuple
+            shape : table
                 Shape of the field's data.
-            fillvalue : int
+            fillvalue : number
                 Value used to pad arrays when storing the data in the hdf5 file.
-            obj_id : int
+            obj_id : number
                 Identifier of the field if contained in the 'object_ids' list.
         ]],
         {name="hdf5_field", type="hdf5.HDF5DataSet",
