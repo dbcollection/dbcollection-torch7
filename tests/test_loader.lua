@@ -52,8 +52,8 @@ local function generate_dataset()
 
     local fields = {
         data = function(size) return torch.repeatTensor(torch.range(1,10), size, 1) end,
-        number = function(size) return torch.range(1,10) end,
-        numberkjiasdjiaojisdjaisdjij = function(size) return torch.range(1,10) end,
+        number = function(size) return torch.range(1,size) end,
+        field_with_a_long_name_for_printing = function(size) return torch.range(1,size) end,
     }
 
     local lists = {
@@ -111,7 +111,7 @@ local function load_dummy_hdf5_file_FieldLoader(path)
     local h5obj = load_dummy_hdf5_file()
     local obj_id = 1
     local field_loader = dbc.FieldLoader(h5obj:read(path), obj_id)
-    return field_loader, dataset
+    return field_loader
 end
 
 local function load_test_data_FieldLoader(set)
@@ -128,19 +128,19 @@ end
 local function load_dummy_hdf5_file_SetLoader(set)
     assert(set)
     local h5obj = load_dummy_hdf5_file()
-    local field_loader = dbc.SetLoader(h5obj:read('/' .. set))
-    return field_loader
+    local set_loader = dbc.SetLoader(h5obj:read('/' .. set))
+    return set_loader
 end
 
 local function load_test_data_SetLoader(set)
     local set = set or 'train'
-    local field_loader = load_dummy_hdf5_file_SetLoader(set)
+    local set_loader = load_dummy_hdf5_file_SetLoader(set)
 
     local dataset, fields = generate_dataset()
     local set_data = dataset[set]
     local set_fields = fields[set]
 
-    return field_loader, set_data, set_fields
+    return set_loader, set_data, set_fields
 end
 
 local function load_test_data_DataLoader()
@@ -477,7 +477,7 @@ end
 function test.test_SetLoader_get_data_single_obj_object_ids_in_memory()
     local set_loader, set_data = load_test_data_SetLoader('train')
 
-    set_loader.fields.data:to_memory(true)
+    set_loader.fields.object_ids:to_memory(true)
     local id = 1
     local data = set_loader:get('object_ids', id)
 
@@ -874,7 +874,7 @@ function test.test_DataLoader_object_field_id_field2()
     local field = 'number'
     local obj_id = data_loader:object_field_id(set, field)
 
-    tester:eq(obj_id, 2)
+    tester:eq(obj_id, 3)
 end
 
 function test.test_DataLoader_info_single_set()
