@@ -542,7 +542,7 @@ function SetLoader:__init(...)
 
     self.hdf5_group = args.hdf5_group
     self.set = self:_get_set_name()
-    self.object_fields = self:_get_object_fields_data()
+    self.object_fields = self:_get_object_fields()
     self.nelems = self:_get_num_elements()
     self._fields = self:_get_field_names()
     self.fields = self:_load_hdf5_fields()  -- add all hdf5 datasets as data fields
@@ -554,6 +554,15 @@ function SetLoader:_get_set_name()
     return str[1]
 end
 
+function SetLoader:_get_object_fields()
+    local object_fields_data = self:_get_hdf5_dataset_data('object_fields')
+    local output = string_ascii.convert_ascii_to_str(object_fields_data)
+    if type(output) == 'string' then
+        output = {output}
+    end
+    return output
+end
+
 function SetLoader:_get_field_names()
     local fields = {}
     for k, v in pairs(self.hdf5_group._children) do
@@ -561,15 +570,6 @@ function SetLoader:_get_field_names()
     end
     table.sort(fields)
     return fields
-end
-
-function SetLoader:_get_object_fields_data()
-    local object_fields_data = self:_get_hdf5_dataset_data('object_fields')
-    local output = string_ascii.convert_ascii_to_str(object_fields_data)
-    if type(output) == 'string' then
-        output = {output}
-    end
-    return output
 end
 
 function SetLoader:_get_hdf5_dataset_data(name)
@@ -1146,8 +1146,7 @@ function FieldLoader:__init(...)
     self._size = self:_get_field_size()
     self.shape = get_data_shape(self._size)
     self.type = get_data_type_hdf5(self.data, self._size)
-    self.ids_list = self:_get_ids_list()
-    self.ndims = #self._size
+    self._ids_list = self:_get_ids_list()
     -- fillvalue not implemented in hdf5 lib
     self.obj_id = args.obj_id
 end
@@ -1265,7 +1264,7 @@ function FieldLoader:_get_ids(idx)
         if next(idx) then
             return self:_get_ids_table(idx)
         else
-            return self.ids_list
+            return self._ids_list
         end
     else
         error('Invalid index type: ' .. dtype)
@@ -1273,7 +1272,7 @@ function FieldLoader:_get_ids(idx)
 end
 
 function FieldLoader:_get_ids_table(idx)
-    local ids = self.ids_list
+    local ids = self._ids_list
     for i=1, #idx do
         local dtype = type(idx[i])
         if dtype == 'table' then
@@ -1352,7 +1351,7 @@ function FieldLoader:info(...)
                 If true, display extra information about the field.
         ]],
         {name="verbose", type="boolean", default=true,
-         help="Name of the dataset.",
+         help="If true, display extra information about the field.",
          opt=true}
     }
 
