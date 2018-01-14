@@ -30,19 +30,25 @@ luarocks install argcheck
 
 ### Installation
 
-To install the dbcollection's Lua/Torch7 API, first the Python's version must be installed on your system. If you do not have it already installed, then you can install it either via `pip`, `conda` or from [source](https://github.com/dbcollection/dbcollection#package-installation). Here we'll use `pip` to install this package:
+To install the dbcollection's Lua/Torch7 API you must first have the Python's version installed in your system. If you do not have it already installed, then you can install it either via `pip`, `conda` or from [source](https://github.com/dbcollection/dbcollection#package-installation). Here we'll use `pip` to install this package:
 
+```bash
+$ pip install dbcollection
 ```
-pip install dbcollection
-```
+
+After you have the Python's version installed in your system, get the Lua/Torch7's API via the following repository:
 
 Then, all there is to do is to clone this repo and install the package via `luarocks`:
 
-```
-git clone https://github.com/dbcollection/dbcollection-torch7
-cd dbcollection-torch7 && luarocks make rocks/*
+```bash
+$ git clone https://github.com/dbcollection/dbcollection-torch7
 ```
 
+Then, all there is to do is to install the package via `luarocks`
+
+```bash
+$ cd dbcollection-torch7/ && luarocks make rocks/*
+```
 
 ## Usage
 
