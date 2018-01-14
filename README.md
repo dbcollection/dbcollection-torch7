@@ -105,4 +105,4 @@ For a more detailed view of the Lua's API documentation see [here](DOCUMENTATION
 
 ## License
 
-MIT license (see the [LICENSE](LICENSE) file)
+[MIT license](LICENSE)
